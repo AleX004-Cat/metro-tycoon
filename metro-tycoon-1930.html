@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metro Tycoon — 1930</title>
+<style>
+  :root{
+    --panel:#171a21; --panel2:#212531; --border:#2c3140;
+    --text:#e8e6df; --gold:#e8c143; --accent:#5fa8ff; --danger:#ff5f52;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    min-height:100vh; color:var(--text);
+    background:#101218 radial-gradient(1100px 500px at 50% -10%, #1d2433, #101218);
+    font-family:"Segoe UI", system-ui, Arial, sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:18px 12px 30px;
+  }
+  h1{ font-size:22px; letter-spacing:3px; text-transform:uppercase; margin-bottom:12px; }
+  h1 span{ color:var(--gold); }
+  h1 small{ font-size:12px; letter-spacing:2px; opacity:.55; margin-left:8px; }
+
+  #hud{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
+    background:var(--panel); border:2px solid var(--border); border-radius:12px;
+    padding:10px 14px; max-width:660px; width:100%; margin-bottom:8px;
+  }
+  .stat{ background:var(--panel2); border-radius:9px; padding:6px 14px; text-align:center; min-width:92px; }
+  .stat .v{ font-size:17px; font-weight:700; }
+  .stat .k{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6; margin-top:2px; }
+  #moneyV{ color:var(--gold); }
+
+  button{
+    cursor:pointer; font:inherit; font-weight:700; color:#141414;
+    background:var(--gold); border:none; border-radius:9px; padding:9px 16px;
+    transition:filter .15s;
+  }
+  button:hover{ filter:brightness(1.12); }
+  button:disabled{ opacity:.45; cursor:not-allowed; filter:none; }
+  button.secondary{ background:#3a4152; color:var(--text); }
+
+  .sliderBox{
+    display:flex; align-items:center; gap:8px; background:var(--panel2);
+    border-radius:9px; padding:7px 12px; font-size:12px;
+  }
+  .sliderBox .lab{ opacity:.75; letter-spacing:.5px; }
+  input[type=range]{ accent-color:var(--gold); width:110px; cursor:pointer; }
+  #freqV{ font-weight:700; font-size:15px; min-width:14px; text-align:center; }
+
+  #bar{ width:100%; max-width:660px; height:4px; background:#232733; border-radius:2px; overflow:hidden; margin-bottom:10px; }
+  #barFill{ height:100%; width:0%; background:var(--gold); transition:width .1s linear; }
+
+  #stage{ position:relative; line-height:0; }
+  canvas{ border:2px solid var(--border); border-radius:8px; box-shadow:0 14px 34px rgba(0,0,0,.55); background:#dcd7c4; }
+  #overlay{
+    position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+    gap:8px; background:rgba(9,10,14,.78); border-radius:8px; line-height:1.25; text-align:center;
+  }
+  #ovBig{ font-size:44px; font-weight:800; letter-spacing:5px; color:var(--danger); text-shadow:0 3px 16px rgba(0,0,0,.9); }
+  #ovSub{ font-size:14px; color:#cfd3dc; }
+
+  #log{
+    max-width:660px; width:100%; margin-top:12px; background:var(--panel);
+    border:1px solid var(--border); border-radius:9px; padding:8px 12px;
+    font-size:12.5px; height:96px; overflow:hidden;
+    display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  #log div{ opacity:.75; padding:1px 0; }
+  #log div:last-child{ opacity:1; color:var(--accent); }
+
+  #legend{ display:flex; flex-wrap:wrap; gap:8px 14px; max-width:660px; margin-top:10px; font-size:12px; opacity:.85; }
+  #legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; border:1px solid rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+
+<h1>Metro <span>Tycoon</span><small>прототип · 1930</small></h1>
+
+<div id="hud">
+  <div class="stat"><div class="v" id="yearV">1930</div><div class="k">Год</div></div>
+  <div class="stat"><div class="v" id="monthV">Январь</div><div class="k">Месяц</div></div>
+  <div class="stat" id="moneyStat"><div class="v" id="moneyV">$50 000</div><div class="k">Казна</div></div>
+  <button id="btnPause">▶ Пуск</button>
+  <button id="btnRestart" class="secondary">↻ Новая игра</button>
+  <div class="sliderBox">
+    <span class="lab">Частота изменений города</span>
+    <input id="freq" type="range" min="1" max="5" step="1" value="2">
+    <span id="freqV">2</span>
+  </div>
+</div>
+
+<div id="bar"><div id="barFill"></div></div>
+
+<div id="stage">
+  <canvas id="cv" width="600" height="600"></canvas>
+  <div id="overlay"><div id="ovBig">ПАУЗА</div><div id="ovSub">Нажмите «Пуск», чтобы продолжить</div></div>
+</div>
+
+<div id="log"></div>
+<div id="legend"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= КОНСТАНТЫ ================= */
+const G = 30, TS = 20, N = G * G;          // сетка 30x30, плитка 20px
+const MONTH_MS = 3000;                      // 1 месяц = 3 секунды
+const UPKEEP = 500;                         // ежемесячное обслуживание
+
+// Типы плиток
+const T = { EMPTY:0, RIVER:1, MAIN:2, ROAD:3, BRIDGE:4, BIZ:5, RES:6, IND:7, SHOP:8, OFC:9 };
+
+// Что не может менять «живой город»: река, дороги, мосты и Деловой Центр
+const LOCKED = [0,1,1,1,1,1,0,0,0,1];
+
+// Цвета плиток
+const C = {};
+C[T.EMPTY]=[219,213,194]; C[T.RIVER]=[43,107,175];  C[T.MAIN]=[45,49,57];
+C[T.ROAD] =[154,159,167]; C[T.BRIDGE]=[126,84,46];  C[T.BIZ] =[189,60,48];
+C[T.RES]  =[66,152,88];   C[T.IND]  =[103,110,122]; C[T.SHOP] =[227,192,60];
+C[T.OFC]  =[110,28,60];   // бордовый — офисы/небоскрёбы
+
+const NAMES = {0:"Пустырь",1:"Река",2:"Главная дорога",3:"Второстеп. дорога",4:"Мост",5:"Деловой центр",6:"Спальный район",7:"Промзона",8:"Торговые ряды",9:"Офисы/небоскрёбы"};
+const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+
+/* ================= СОСТОЯНИЕ ================= */
+const grid   = new Uint8Array(N);            // тип плитки
+const zone   = new Uint8Array(N);            // 1 = клетка свободна для застройки (только генерация)
+const orient = new Uint8Array(N);            // ориентация дороги/моста: 1 верт., 2 гориз.
+const access = new Uint8Array(N);            //_cells рядом с дорогами (радиус 2) — могут застраиваться
+const animT    = new Float64Array(N).fill(-1); // момент смены плитки
+const animFrom = new Uint8Array(N);            // старый тип для плавного перехода
+
+let year = 1930, month = 0;
+let money = 50000;
+let running = false, bankrupt = false;
+let freq = 2;                 // частота изменений города (1..5)
+let elapsed = 0, last = performance.now();
+let BCX = 15, BCY = 15;       // центр Делового Центра (перекрёсток магистралей)
+let MRY = 0, MRX = 0;         // ряд/колонка главных дорог
+let SEC_R = [], SEC_C = [];   // второстепенные дороги
+
+/* ================= DOM ================= */
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const elYear = $("yearV"), elMonth = $("monthV"), elMoney = $("moneyV");
+const btnPause = $("btnPause"), btnRestart = $("btnRestart");
+const elFreq = $("freq"), elFreqV = $("freqV");
+const overlay = $("overlay"), ovBig = $("ovBig"), ovSub = $("ovSub");
+const elLog = $("log"), barFill = $("barFill");
+
+// Легенда
+(function buildLegend(){
+  const box = $("legend");
+  for (const t of [0,1,2,3,4,5,6,7,8,9]){
+    const c = C[t];
+    const s = document.createElement("span");
+    s.innerHTML = '<i style="background:rgb('+c[0]+','+c[1]+','+c[2]+')"></i>' + NAMES[t];
+    box.appendChild(s);
+  }
+})();
+
+/* ================= УТИЛИТЫ ================= */
+function rnd(n){ return (Math.random()*n)|0; }
+function pick(a){ return a[rnd(a.length)]; }
+function idx(x,y){ return y*G + x; }
+function clamp(v,a,b){ return v<a ? a : (v>b ? b : v); }
+function hsh(x,y){ let h=(x*374761393 + y*668265263)|0; h=((h^(h>>>13))*1274126177)|0; return (h^(h>>>16))>>>0; }
+function pr(h,n){ return ((h >>> ((n*3)%30)) & 255) / 255; } // детерминированный псевдослучайный 0..1
+function rgb(c){ return "rgb("+c[0]+","+c[1]+","+c[2]+")"; }
+
+function log(msg){
+  const d = document.createElement("div");
+  d.textContent = year + " " + MONTHS[month] + ": " + msg;
+  elLog.appendChild(d);
+  while (elLog.children.length > 6) elLog.removeChild(elLog.firstChild);
+}
+function updateHUD(){
+  elYear.textContent = year;
+  elMonth.textContent = MONTHS[month];
+  elMoney.textContent = "$" + money.toLocaleString("ru-RU");
+  elMoney.style.color = money < 3000 ? "#ff6257" : "";
+}
+function setOverlay(big, sub, show){
+  ovBig.textContent = big;
+  ovSub.textContent = sub || "";
+  overlay.style.display = show ? "flex" : "none";
+}
+
+/* ================= ГЕНЕРАЦИЯ ГОРОДА ================= */
+function genCity(){
+  grid.fill(T.EMPTY); zone.fill(1); orient.fill(0); access.fill(0); animT.fill(-1);
+  makeRiver();
+  makeRoads();
+  carveDistricts();
+  bakeAccess();
+}
+
+/* --- Река: змейка слева-направо или сверху-вниз --- */
+function wander(v){
+  const r = Math.random();
+  if (r < 0.35 && v > 3) v--;
+  else if (r > 0.65 && v < G-4) v++;
+  return v;
+}
+function makeRiver(){
+  if (Math.random() < 0.5){                    // горизонтальная
+    let y = 8 + rnd(14);
+    for (let x=0; x<G; x++){
+      let i = idx(x,y); grid[i]=T.RIVER; zone[i]=0;
+      if (Math.random() < 0.18){               // иногда расширяем русло
+        const yy = clamp(y + (y < G-2 ? 1 : -1), 0, G-1);
+        const j = idx(x,yy); grid[j]=T.RIVER; zone[j]=0;
+      }
+      y = wander(y);
+    }
+  } else {                                     // вертикальная
+    let x = 8 + rnd(14);
+    for (let y=0; y<G; y++){
+      let i = idx(x,y); grid[i]=T.RIVER; zone[i]=0;
+      if (Math.random() < 0.18){
+        const xx = clamp(x + (x < G-2 ? 1 : -1), 0, G-1);
+        const j = idx(xx,y); grid[j]=T.RIVER; zone[j]=0;
+      }
+      x = wander(x);
+    }
+  }
+}
+
+/* --- Дороги: две магистрали + второстепенные; река -> мост --- */
+function layMainRun(p, horizontal){
+  for (let s=0; s<G; s++){
+    const i0 = horizontal ? idx(s,p)   : idx(p,s);
+    const i1 = horizontal ? idx(s,p+1) : idx(p+1,s);
+    const put = i => {
+      zone[i]=0;
+      if (grid[i]===T.MAIN || grid[i]===T.BRIDGE) return;       // перекрёстки магистралей не трогаем
+      grid[i]   = (grid[i]===T.RIVER) ? T.BRIDGE : T.MAIN;
+      orient[i] = horizontal ? 2 : 1;
+    };
+    put(i0); put(i1);
+  }
+}
+function layMinor(p, horizontal){
+  for (let s=0; s<G; s++){
+    const i = horizontal ? idx(s,p) : idx(p,s);
+    const g = grid[i];
+    if (g===T.MAIN || g===T.BRIDGE){ zone[i]=0; continue; }
+    zone[i]=0;
+    if (g===T.RIVER){ grid[i]=T.BRIDGE; orient[i]=horizontal?2:1; }
+    else            { grid[i]=T.ROAD;   orient[i]=horizontal?2:1; }
+  }
+}
+function spread(k, avoid){
+  const res=[]; let guard=0;
+  while (res.length < k && guard++ < 500){
+    const p = 3 + rnd(G-6);
+    if (avoid.some(a => Math.abs(p-a) < 2)) continue;
+    if (res.some(q => Math.abs(p-q) < 4)) continue;
+    res.push(p);
+  }
+  return res;
+}
+function makeRoads(){
+  MRY = 6 + rnd(G-12); MRX = 6 + rnd(G-12);
+  BCX = MRX; BCY = MRY;
+  layMainRun(MRY, true);   // главная горизонталь (2 полосы)
+  layMainRun(MRX, false);  // главная вертикаль (2 полосы)
+  SEC_R = spread(3, [MRY, MRY+1]);
+  SEC_C = spread(3, [MRX, MRX+1]);
+  for (const ry of SEC_R) layMinor(ry, true);
+  for (const cx of SEC_C) layMinor(cx, false);
+}
+
+/* --- Кварталы: Деловой Центр, универмаги, промзона, жильё --- */
+function nearRoad(i){
+  const x=i%G, y=(i/G)|0;
+  for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++){
+    const nx=x+dx, ny=y+dy;
+    if (nx<0 || ny<0 || nx>=G || ny>=G) continue;
+    const t = grid[ny*G+nx];
+    if (t===T.ROAD || t===T.MAIN || t===T.BRIDGE) return true;
+  }
+  return false;
+}
+function blob(cx, cy, r, type){
+  const c0 = idx(cx,cy);
+  if (!zone[c0] || grid[c0]!==T.EMPTY) return;
+  grid[c0]=type; zone[c0]=0;
+  const cells=[[cx,cy]];
+  let steps = r*r*3;
+  while (steps-- > 0 && cells.length < r*5){
+    const [x,y] = cells[rnd(cells.length)];
+    const nx = x + rnd(3) - 1, ny = y + rnd(3) - 1;
+    if (nx<0 || ny<0 || nx>=G || ny>=G) continue;
+    const j = idx(nx,ny);
+    if (zone[j] && grid[j]===T.EMPTY){ grid[j]=type; zone[j]=0; cells.push([nx,ny]); }
+  }
+}
+function carveDistricts(){
+  // 1) Деловой центр — красный круг вокруг перекрёстка магистралей
+  const r = 4 + rnd(2);
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const i = idx(x,y);
+    if (!zone[i]) continue;
+    if (Math.hypot(x-(MRX+0.5), y-(MRY+0.5)) <= r && Math.random() < 0.95){
+      grid[i]=T.BIZ; zone[i]=0;
+    }
+  }
+  // 2) Универмаги на пересечениях второстепенных дорог
+  for (const ry of SEC_R) for (const cx of SEC_C){
+    const cand = [[cx-1,ry-1],[cx+1,ry-1],[cx-1,ry+1],[cx+1,ry+1]];
+    const k = 1 + rnd(2);
+    for (let n=0; n<k; n++){
+      const [x,y] = pick(cand);
+      if (x<0 || y<0 || x>=G || y>=G) continue;
+      const i = idx(x,y);
+      if (zone[i] && grid[i]!==T.RIVER){ grid[i]=T.SHOP; zone[i]=0; }
+    }
+  }
+  // 3) Универмаги вдоль главных дорог (у пересечений с второстепенными)
+  for (const cx of SEC_C){
+    for (const ry of [MRY-1, MRY+2]){
+      const [x,y] = pick([[cx-1,ry],[cx+2,ry]]);
+      if (x>=0 && x<G && y>=0 && y<G){
+        const i=idx(x,y);
+        if (zone[i] && Math.random()<0.85){ grid[i]=T.SHOP; zone[i]=0; }
+      }
+    }
+  }
+  for (const ry of SEC_R){
+    for (const cx of [MRX-1, MRX+2]){
+      const [x,y] = pick([[cx,ry-1],[cx,ry+2]]);
+      if (x>=0 && x<G && y>=0 && y<G){
+        const i=idx(x,y);
+        if (zone[i] && Math.random()<0.85){ grid[i]=T.SHOP; zone[i]=0; }
+      }
+    }
+  }
+  // 4) Промзоны — 2-3 пятна у окраин
+  for (let k=0; k<3; k++){
+    for (let tries=0; tries<80; tries++){
+      const x=rnd(G), y=rnd(G);
+      const dEdge = Math.min(x,y,G-1-x,G-1-y);
+      if (zone[idx(x,y)] && dEdge<=5 && Math.hypot(x-MRX,y-MRY)>=8){ blob(x,y,3,T.IND); break; }
+    }
+  }
+  // 5) Спальные районы — вдоль дорог, подальше от центра (оставляем пустыри для роста)
+  const spots=[];
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const i = idx(x,y);
+    if (!zone[i] || grid[i]!==T.EMPTY) continue;
+    if (nearRoad(i) && Math.hypot(x-MRX,y-MRY) >= r+2) spots.push(i);
+  }
+  for (let k=0; k<7 && spots.length; k++){
+    const i = pick(spots);
+    blob(i%G, (i/G)|0, 2 + rnd(2), T.RES);
+  }
+}
+
+/* --- Карта доступности: всё в радиусе 2 клеток от дорог --- */
+function bakeAccess(){
+  access.fill(0);
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const t = grid[idx(x,y)];
+    if (t!==T.ROAD && t!==T.MAIN && t!==T.BRIDGE) continue;
+    for (let dy=-2; dy<=2; dy++) for (let dx=-2; dx<=2; dx++){
+      const nx=x+dx, ny=y+dy;
+      if (nx>=0 && ny>=0 && nx<G && ny<G) access[idx(nx,ny)]=1;
+    }
+  }
+}
+
+/* ================= ЖИВОЙ ГОРОД ================= */
+function setTile(i, t){
+  if (grid[i]===t) return;
+  animFrom[i]=grid[i];
+  animT[i]=performance.now();
+  grid[i]=t;
+}
+function countN(i, types){
+  const x=i%G, y=(i/G)|0; let c=0;
+  for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++){
+    if (!dx && !dy) continue;
+    const nx=x+dx, ny=y+dy;
+    if (nx<0 || ny<0 || nx>=G || ny>=G) continue;
+    if (types.indexOf(grid[ny*G+nx]) >= 0) c++;
+  }
+  return c;
+}
+function evolveCity(){
+  const era = clamp((year-1930)/70, 0, 1);   // 0 в 1930 → 1 в 2000
+  const attempts = freq*3;
+  let builtRes=0, builtShop=0, builtInd=0, ofc=0, renovated=0;
+
+  for (let a=0; a<attempts; a++){
+    const i = rnd(N);
+    const t = grid[i];
+    if (t===T.OFC || LOCKED[t]) continue;    // река, дороги, мосты, квартал — неприкосновенны
+    const x=i%G, y=(i/G)|0;
+    const dC = Math.hypot(x-BCX, y-BCY);
+
+    if (t===T.EMPTY){
+      if (access[i]){
+        // промзона выползает на окраины
+        if (dC>11 && Math.random()<0.03+0.12*era){ setTile(i,T.IND); builtInd++; continue; }
+        // пустыри у дорог застраиваются жильём или торговыми рядами
+        if (Math.random() < 0.08 + 0.045*freq){
+          if (dC<=9 && Math.random() < 0.22 + 0.5*era){ setTile(i,T.SHOP); builtShop++; }
+          else { setTile(i,T.RES); builtRes++; }
+        }
+      }
+    }
+    else if (t===T.RES){
+      // у Делового Центра жильё сносят — растут офисы и небоскрёбы (особенно в поздние годы)
+      if (dC<=7 && year>=1938){
+        const nearOfc = countN(i, [T.OFC, T.BIZ]) > 0;
+        if (Math.random() < 0.02 + (nearOfc ? 0.10 : 0) + 0.10*era){ setTile(i,T.OFC); ofc++; }
+      }
+    }
+    else if (t===T.IND){
+      // старая промзона в глубине города уступает место жилью
+      if (dC<=13 && year>=1942 && Math.random() < 0.03 + 0.07*era){ setTile(i,T.RES); renovated++; }
+    }
+  }
+
+  // фабрики периодически «переезжают» к краям карты
+  if (Math.random() < 0.10 + 0.20*era){
+    for (let tries=0; tries<30; tries++){
+      const i=rnd(N), x=i%G, y=(i/G)|0;
+      if (Math.min(x,y,G-1-x,G-1-y)<=6 && grid[i]===T.EMPTY && access[i]){ setTile(i,T.IND); builtInd++; break; }
+    }
+  }
+
+  const parts=[];
+  if (builtRes)   parts.push("новые жилые дома: "+builtRes);
+  if (builtShop)  parts.push("торговые ряды: "+builtShop);
+  if (builtInd)   parts.push("промзона растёт на окраинах");
+  if (ofc)        parts.push("небоскрёбы у Делового Центра: +"+ofc);
+  if (renovated)  parts.push("промзона уступает жилью: "+renovated);
+  if (parts.length) log("Город живёт — " + parts.join(", ") + ".");
+}
+
+/* ================= ВРЕМЯ И ЭКОНОМИКА ================= */
+function monthTick(){
+  month++;
+  if (month > 11){ month=0; year++; }
+  money -= UPKEEP;
+  evolveCity();
+  if (money < 0) doBankrupt();
+  updateHUD();
+}
+function doBankrupt(){
+  running=false; bankrupt=true;
+  btnPause.textContent="▶ Пуск";
+  btnPause.disabled=true;
+  setOverlay("БАНКРОТСТВО!", "Казна пуста. Нажмите «Новая игра», чтобы начать заново.", true);
+  log("БАНКРОТСТВО! Строительство метро остановлено.");
+}
+
+/* ================= ОТРИСОВКА ================= */
+function house(bx, by, s){
+  ctx.fillStyle="#cdb98f";
+  ctx.fillRect(bx, by, 8, 7);
+  ctx.fillStyle="#9c4a2c";
+  ctx.fillRect(bx-1, by-3, 10, 3);
+  ctx.fillStyle="#5b4a33";
+  ctx.fillRect(bx + (s>0 ? 5 : 1), by+3, 2, 4);
+}
+function drawTile(px, py, x, y, t, ts){
+  const i = y*G+x;
+  const c = C[t];
+  ctx.fillStyle = rgb(c);
+  ctx.fillRect(px, py, TS, TS);
+  const h = hsh(x,y);
+
+  switch (t){
+  case T.EMPTY:
+    ctx.fillStyle="rgba(116,138,88,.28)";
+    ctx.fillRect(px+2+(pr(h,1)*13|0), py+2+(pr(h,2)*13|0), 3, 2);
+    ctx.fillRect(px+2+(pr(h,3)*13|0), py+2+(pr(h,4)*13|0), 2, 3);
+    break;
+  case T.RIVER:{
+    const ph = ts*0.0011 + x*0.9 + y*0.7;
+    const ox = Math.sin(ph)*3;
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.fillRect(px+9+ox, py+4, 6, 2);
+    ctx.fillRect(px+4-ox, py+13, 5, 2);
+    ctx.fillStyle="rgba(0,20,60,.15)";
+    ctx.fillRect(px, py, TS, 2);
+    break;}
+  case T.MAIN:
+    if (orient[i]===1){
+      ctx.fillStyle="rgba(255,255,255,.10)";
+      ctx.fillRect(px,py,2,TS); ctx.fillRect(px+TS-2,py,2,TS);
+      ctx.fillStyle="#d8c258";
+      ctx.fillRect(px+9,py+1,2,6); ctx.fillRect(px+9,py+13,2,6);
+    } else {
+      ctx.fillStyle="rgba(255,255,255,.10)";
+      ctx.fillRect(px,py,TS,2); ctx.fillRect(px,py+TS-2,TS,2);
+      ctx.fillStyle="#d8c258";
+      ctx.fillRect(px+1,py+9,6,2); ctx.fillRect(px+13,py+9,6,2);
+    }
+    break;
+  case T.ROAD:
+    ctx.fillStyle="rgba(255,255,255,.35)";
+    if (orient[i]===1){ ctx.fillRect(px+9,py+2,2,5); ctx.fillRect(px+9,py+13,2,5); }
+    else              { ctx.fillRect(px+2,py+9,5,2); ctx.fillRect(px+13,py+9,5,2); }
+    break;
+  case T.BRIDGE:
+    if (orient[i]===1){
+      ctx.fillStyle="#55361c";
+      ctx.fillRect(px,py,2,TS); ctx.fillRect(px+TS-2,py,2,TS);
+      ctx.fillStyle="#6b4526";
+      for (let k=4; k<TS-3; k+=5) ctx.fillRect(px+2, py+k, TS-4, 2);
+    } else {
+      ctx.fillStyle="#55361c";
+      ctx.fillRect(px,py,TS,2); ctx.fillRect(px,py+TS-2,TS,2);
+      ctx.fillStyle="#6b4526";
+      for (let k=4; k<TS-3; k+=5) ctx.fillRect(px+k, py+2, 2, TS-4);
+    }
+    break;
+  case T.BIZ:
+    ctx.fillStyle="#7c2b22";
+    ctx.fillRect(px+4, py+4, 12, 13);
+    ctx.fillStyle="#4d1b16";
+    ctx.fillRect(px+4, py+4, 12, 2);
+    ctx.fillStyle="rgba(255,214,160,.85)";
+    for (let wy=0; wy<3; wy++) for (let wx=0; wx<3; wx++)
+      ctx.fillRect(px+6+wx*4, py+6+wy*4, 2, 2);
+    break;
+  case T.RES:
+    house(px+1+(pr(h,1)*2|0), py+8, 1);
+    house(px+9+(pr(h,2)*2|0), py+6, -1);
+    break;
+  case T.IND:
+    ctx.fillStyle="#4c525c";
+    ctx.fillRect(px+3, py+7, 11, 9);
+    ctx.fillStyle="#5d646f";
+    ctx.fillRect(px+3, py+5, 5, 2); ctx.fillRect(px+9, py+5, 5, 2);
+    ctx.fillStyle="#3a3f47";
+    ctx.fillRect(px+12, py+2, 2, 6);
+    ctx.fillStyle="rgba(230,230,230,.35)";
+    ctx.beginPath(); ctx.arc(px+13, py+2, 2, 0, 7); ctx.fill();
+    break;
+  case T.SHOP:
+    for (let k=0; k<4; k++){
+      ctx.fillStyle = k%2 ? "#f6ecd6" : "#b64a34";
+      ctx.fillRect(px+k*5, py, 5, 5);
+    }
+    ctx.fillStyle="#8a6a1c";
+    ctx.fillRect(px, py+5, TS, 1);
+    ctx.fillStyle="#4a3a12";
+    ctx.fillRect(px+7, py+9, 6, 9);
+    break;
+  case T.OFC:
+    ctx.fillStyle="#48112a";
+    ctx.fillRect(px+5, py+2, 10, 15);
+    ctx.fillStyle="#2c0a1a";
+    ctx.fillRect(px+9, py, 2, 2);
+    ctx.fillStyle="#f0d27c";
+    for (let wy=0; wy<4; wy++) for (let wx=0; wx<2; wx++)
+      ctx.fillRect(px+7+wx*4, py+4+wy*3, 2, 2);
+    break;
+  }
+  // тонкие границы плиток для глубины
+  ctx.fillStyle="rgba(0,0,0,.07)";
+  ctx.fillRect(px+TS-1, py, 1, TS);
+  ctx.fillRect(px, py+TS-1, TS, 1);
+}
+function draw(ts){
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const i = y*G+x, px=x*TS, py=y*TS;
+    drawTile(px, py, x, y, grid[i], ts);
+    const t0 = animT[i];
+    if (t0 >= 0){                       // плавный переход старый -> новый тип
+      const k = (ts - t0) / 600;
+      if (k >= 1) animT[i] = -1;
+      else {
+        ctx.globalAlpha = 1 - k;
+        drawTile(px, py, x, y, animFrom[i], ts);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+}
+
+/* ================= ЦИКЛ ================= */
+function frame(ts){
+  const dt = Math.min(100, ts - last); last = ts;
+  if (running && !bankrupt){
+    elapsed += dt;
+    if (elapsed >= MONTH_MS){ elapsed -= MONTH_MS; monthTick(); }
+    barFill.style.width = (elapsed/MONTH_MS*100).toFixed(1) + "%";
+  } else {
+    barFill.style.width = "0%";
+  }
+  draw(ts);
+  requestAnimationFrame(frame);
+}
+
+/* ================= УПРАВЛЕНИЕ ================= */
+btnPause.addEventListener("click", () => {
+  if (bankrupt) return;
+  running = !running; elapsed = 0;
+  btnPause.textContent = running ? "❚❚ Пауза" : "▶ Пуск";
+  if (running){
+    overlay.style.display = "none";
+    log("Город живёт — время пошло.");
+  } else {
+    setOverlay("ПАУЗА", "Нажмите «Пуск», чтобы продолжить", true);
+  }
+});
+btnRestart.addEventListener("click", () => {
+  year=1930; month=0; money=50000;
+  running=false; bankrupt=false; elapsed=0;
+  btnPause.disabled=false; btnPause.textContent="▶ Пуск";
+  overlay.style.display="none";
+  elLog.innerHTML="";
+  genCity();
+  updateHUD();
+  log("Новый город основан. Бюджет метро: $50 000.");
+});
+elFreq.addEventListener("input", e => {
+  freq = +e.target.value;
+  elFreqV.textContent = freq;
+});
+
+/* ================= СТАРТ ================= */
+genCity();
+updateHUD();
+log("Город основан. Бюджет метро: $50 000. Нажмите «Пуск».");
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
