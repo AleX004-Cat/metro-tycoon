@@ -1,0 +1,3819 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metro Tycoon — 1930</title>
+<style>
+  :root{
+    --panel:#171a21; --panel2:#212531; --border:#2c3140;
+    --text:#e8e6df; --gold:#e8c143; --accent:#5fa8ff; --danger:#ff5f52;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    min-height:100vh; color:var(--text);
+    background:#101218 radial-gradient(1100px 500px at 50% -10%, #1d2433, #101218);
+    font-family:"Segoe UI", system-ui, Arial, sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:18px 12px 30px;
+  }
+  h1{ font-size:22px; letter-spacing:3px; text-transform:uppercase; margin-bottom:12px; }
+  h1 span{ color:var(--gold); }
+  h1 small{ font-size:12px; letter-spacing:2px; opacity:.55; margin-left:8px; }
+
+  #hud{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
+    background:var(--panel); border:2px solid var(--border); border-radius:12px;
+    padding:10px 14px; max-width:900px; width:100%; margin-bottom:8px;
+  }
+  #econRow{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
+    background:var(--panel); border:2px solid var(--border); border-radius:12px;
+    padding:10px 14px; max-width:900px; width:100%; margin-bottom:8px;
+  }
+  .stat{ background:var(--panel2); border-radius:9px; padding:6px 14px; text-align:center; min-width:92px; }
+  .stat .v{ font-size:17px; font-weight:700; }
+  .stat .k{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6; margin-top:2px; }
+  #moneyV{ color:var(--gold); }
+
+  button{
+    cursor:pointer; font:inherit; font-weight:700; color:#141414;
+    background:var(--gold); border:none; border-radius:9px; padding:9px 16px;
+    transition:filter .15s, background .15s;
+  }
+  button:hover{ filter:brightness(1.12); }
+  button:disabled{ opacity:.45; cursor:not-allowed; filter:none; }
+  button.secondary{ background:#3a4152; color:var(--text); }
+  button.active{ background:var(--accent); color:#0b0e14; }
+
+  .sliderBox{
+    display:flex; align-items:center; gap:8px; background:var(--panel2);
+    border-radius:9px; padding:7px 12px; font-size:12px;
+  }
+  .sliderBox .lab{ opacity:.75; letter-spacing:.5px; }
+  input[type=range]{ accent-color:var(--gold); width:110px; cursor:pointer; }
+  #freqV, #priceV{ font-weight:700; font-size:15px; min-width:20px; text-align:center; }
+
+  #bar{ width:100%; max-width:900px; height:4px; background:#232733; border-radius:2px; overflow:hidden; margin-bottom:10px; }
+  #barFill{ height:100%; width:0%; background:var(--gold); transition:width .1s linear; }
+
+  #appRow{ display:flex; gap:14px; align-items:flex-start; justify-content:center; width:100%; }
+  #mainCol{ display:flex; flex-direction:column; align-items:center; }
+
+  #stageScroll{
+    position:relative; max-width:640px; max-height:640px; overflow:auto;
+    border:2px solid var(--border); border-radius:8px; box-shadow:0 14px 34px rgba(0,0,0,.55);
+  }
+  #stage{ position:relative; line-height:0; }
+  canvas{ display:block; background:#dcd7c4; cursor:crosshair; }
+  #overlay{
+    position:sticky; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:8px; background:rgba(9,10,14,.78); line-height:1.25; text-align:center;
+  }
+  #ovBig{ font-size:44px; font-weight:800; letter-spacing:5px; color:var(--danger); text-shadow:0 3px 16px rgba(0,0,0,.9); }
+  #ovSub{ font-size:14px; color:#cfd3dc; }
+
+  #log{
+    max-width:640px; width:100%; margin-top:12px; background:var(--panel);
+    border:1px solid var(--border); border-radius:9px; padding:8px 12px;
+    font-size:12.5px; height:96px; overflow:hidden;
+    display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  #log div{ opacity:.75; padding:1px 0; }
+  #log div:last-child{ opacity:1; color:var(--accent); }
+
+  #legend{ display:flex; flex-wrap:wrap; gap:8px 14px; max-width:640px; margin-top:10px; font-size:12px; opacity:.85; }
+  #legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; border:1px solid rgba(0,0,0,.35); }
+
+  #sidePanel{
+    width:240px; flex-shrink:0; background:var(--panel); border:2px solid var(--border);
+    border-radius:12px; padding:14px; font-size:12.5px;
+  }
+  #sidePanel h2{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; color:var(--gold); }
+  #sidePanel .row{ display:flex; gap:6px; margin-bottom:8px; }
+  #sidePanel .row button{ flex:1; padding:8px 6px; font-size:12px; }
+  #addLineForm input{
+    flex:1; min-width:0; background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    border-radius:7px; padding:7px 8px; font:inherit;
+  }
+  #addLineForm button{ flex:0 0 auto; padding:7px 12px; }
+  #lineSelect{
+    width:100%; background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    border-radius:7px; padding:7px; margin-bottom:8px; font:inherit;
+  }
+  .lineChip{
+    display:flex; align-items:center; gap:6px; background:var(--panel2); border-radius:7px;
+    padding:5px 7px; margin-bottom:5px; font-size:11.5px;
+  }
+  .lineChip .dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .lineChip .nm{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+  .lineChip .nm:hover{ text-decoration:underline; color:var(--accent); }
+  .lineChip button{ padding:1px 6px; font-size:11px; border-radius:5px; background:#3a4152; color:var(--text); }
+  #sidePanel .hint{ opacity:.55; font-size:11px; margin-top:6px; line-height:1.4; }
+  #sidePanel .empty{ opacity:.5; font-size:11.5px; padding:6px 0; }
+
+  /* ---- Модальное окно станции (Редактор станции) ---- */
+  #stationModal{
+    position:fixed; inset:0; background:rgba(8,9,13,.75); display:none;
+    align-items:center; justify-content:center; z-index:80; padding:16px; overflow:auto;
+  }
+  #stationModalBox{
+    width:720px; max-width:100%; max-height:92vh; overflow:auto;
+    background:var(--panel); border:2px solid var(--border);
+    border-radius:14px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,.6);
+  }
+  .smHeader{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .smHeader span{ font-size:14px; font-weight:700; letter-spacing:.5px; color:var(--gold); }
+  #smClose{ background:#3a4152; color:var(--text); padding:4px 9px; border-radius:7px; font-size:12px; }
+  .smRow{ display:flex; gap:6px; margin-bottom:8px; }
+  .smRow input{
+    flex:1; min-width:0; background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    border-radius:7px; padding:7px 8px; font:inherit;
+  }
+  .smRow button{ padding:8px 10px; font-size:12px; }
+  .smFullBtn{ width:100%; margin-bottom:8px; padding:9px; font-size:12.5px; }
+  .smExitTypeRow{ display:flex; gap:6px; margin-bottom:8px; }
+  .smExitCard{ flex:1; display:flex; flex-direction:column; gap:4px; }
+  .smExitTypeBtn{
+    width:100%; background:#3a4152; color:var(--text); border-radius:8px; padding:8px 4px;
+    font-size:10.5px; line-height:1.6; text-align:center;
+  }
+  .smExitTypeBtn small{ opacity:.65; font-weight:400; }
+  .smExitTypeBtn:hover{ background:var(--accent); color:#0b0e14; }
+  .smExitCountRow{ display:flex; align-items:center; justify-content:center; gap:6px; }
+  .smExitCountRow .smArrow{ padding:3px 8px; font-size:12px; background:#232733; color:var(--text); border-radius:5px; }
+  .smExitCountRow .smSelVal{ font-size:11.5px; color:var(--gold); min-width:14px; text-align:center; }
+  #smConserve.active{ background:#ff8f4d; color:#2a1400; }
+  #smInfo{ background:var(--panel2); border-radius:9px; padding:8px 10px; font-size:11.5px; opacity:.85; line-height:1.6; margin-top:4px; }
+
+  #smBody{ display:flex; gap:16px; flex-wrap:wrap; }
+  #smPreviewCol{ width:260px; flex-shrink:0; }
+  .smPreviewLabel{ font-size:10px; letter-spacing:1px; text-transform:uppercase; opacity:.6; margin:6px 0 4px; }
+  #smSideCanvas, #smTopCanvas{
+    width:260px; height:120px; background:#0b0d12; border:1px solid var(--border); border-radius:8px; display:block;
+  }
+  #smCostBox{
+    margin-top:10px; background:var(--panel2); border-radius:9px; padding:9px 10px;
+    font-size:11.5px; line-height:1.8;
+  }
+  #smCostBox b{ color:var(--gold); float:right; }
+  #smPendingDelta{ font-size:11px; opacity:.75; min-height:14px; margin:6px 0 4px; text-align:center; }
+  #smPendingBar{ display:flex; gap:6px; }
+  #smPendingBar button{ flex:1; padding:9px 4px; font-size:12px; }
+  #smSaveDesign.justSaved{ background:#4caf6d; color:#0b1a10; }
+  #smControlsCol{ flex:1; min-width:260px; }
+
+  #smTabs{ display:flex; gap:4px; margin-bottom:10px; }
+  .smTabBtn{ flex:1; padding:7px 4px; font-size:11.5px; background:#3a4152; color:var(--text); border-radius:7px 7px 0 0; }
+  .smTabBtn.active{ background:var(--accent); color:#0b0e14; }
+  .smTab{ display:none; }
+  .smTab.active{ display:block; }
+
+  .smSelRow{ display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--panel2); border-radius:9px; padding:8px 10px; margin-bottom:7px; }
+  .smSelLabel{ font-size:11.5px; opacity:.85; flex:1; }
+  .smSelCtrl{ display:flex; align-items:center; gap:6px; }
+  .smArrow{ padding:3px 9px; font-size:12px; background:#3a4152; color:var(--text); border-radius:6px; }
+  .smSelVal{ font-size:11.5px; min-width:150px; text-align:center; color:var(--gold); }
+
+  .smToggleRow{ display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--panel2); border-radius:9px; padding:8px 10px; margin-bottom:7px; }
+  .smToggleLabel{ font-size:11.5px; opacity:.85; flex:1; }
+  .smToggleBtn{ padding:5px 12px; font-size:11px; background:#3a4152; color:var(--text); border-radius:6px; }
+  .smToggleBtn.active{ background:#4caf6d; color:#0b1a10; }
+
+  .smNote{ font-size:11px; opacity:.55; padding:8px 2px; line-height:1.4; }
+
+  @media (max-width: 620px){
+    #smPreviewCol{ width:100%; }
+    #smSideCanvas, #smTopCanvas{ width:100%; }
+  }
+
+  /* ---- Модальное окно туториала ---- */
+  #tutorialModal{
+    position:fixed; inset:0; background:rgba(8,9,13,.75); display:none;
+    align-items:center; justify-content:center; z-index:90; padding:16px;
+  }
+  #tutorialBox{
+    width:480px; max-width:100%; max-height:88vh; overflow:auto;
+    background:var(--panel); border:2px solid var(--border); border-radius:14px;
+    padding:18px; box-shadow:0 18px 40px rgba(0,0,0,.6);
+  }
+  #tutContent{ font-size:13px; line-height:1.65; min-height:190px; }
+  #tutContent h3{ color:var(--gold); font-size:16px; margin-bottom:10px; letter-spacing:.3px; }
+  #tutContent p{ margin-bottom:8px; opacity:.9; }
+  #tutContent ul{ padding-left:18px; margin:6px 0 10px; }
+  #tutContent li{ margin-bottom:7px; opacity:.9; }
+  #tutContent b{ color:var(--accent); }
+  #tutDots{ display:flex; gap:6px; justify-content:center; margin:14px 0 4px; flex-wrap:wrap; }
+  .tutDot{ width:8px; height:8px; border-radius:50%; background:#3a4152; cursor:pointer; flex-shrink:0; }
+  .tutDot.active{ background:var(--gold); }
+  #tutNav{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
+  #tutPageIndicator{ font-size:11.5px; opacity:.55; white-space:nowrap; }
+  #tutNav button{ padding:9px 16px; font-size:12.5px; }
+
+  /* =====================================================================
+     БОКОВАЯ ПАНЕЛЬ ОТЗЫВОВ ПАССАЖИРОВ (3 эпохи)
+     ===================================================================== */
+  #revTab{
+    position:fixed; top:50%; right:0; transform:translateY(-50%);
+    z-index:71; writing-mode:vertical-rl; text-orientation:mixed;
+    background:var(--panel2); color:var(--text); border:2px solid var(--border); border-right:none;
+    border-radius:10px 0 0 10px; padding:14px 8px; font-size:12px; font-weight:700;
+    letter-spacing:1px; cursor:pointer; box-shadow:-4px 0 14px rgba(0,0,0,.35);
+  }
+  #revTab:hover{ background:var(--accent); color:#0b0e14; }
+  #revPanel{
+    position:fixed; top:0; right:0; height:100%; width:420px; max-width:92vw;
+    z-index:70; transform:translateX(100%); transition:transform .38s cubic-bezier(.2,.8,.25,1);
+    background:#12141a; border-left:2px solid var(--border); box-shadow:-10px 0 40px rgba(0,0,0,.5);
+    display:flex; flex-direction:column;
+  }
+  #revPanel.open{ transform:translateX(0); }
+  #revEraTabs{ display:flex; gap:0; flex-shrink:0; }
+  .revEraBtn{
+    flex:1; padding:12px 6px; font-size:11.5px; font-weight:700; border-radius:0;
+    background:#232733; color:#9aa0ac; border-bottom:3px solid transparent;
+  }
+  .revEraBtn.active{ background:#171a21; color:var(--gold); border-bottom-color:var(--gold); }
+  #revBody{ flex:1; overflow:auto; position:relative; }
+  .revEra{ display:none; min-height:100%; }
+  .revEra.active{ display:block; animation:revEraFadeIn .35s ease; }
+  @keyframes revEraFadeIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+  #revCloseX{
+    position:absolute; top:8px; right:8px; z-index:5; width:26px; height:26px; padding:0;
+    border-radius:50%; background:rgba(0,0,0,.35); color:#fff; font-size:13px; line-height:1;
+  }
+
+  /* ---- Заглушка «раздел ещё не наступил» (для web90/modern до нужного года) ---- */
+  .revLocked{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:60px 24px; min-height:70vh; color:var(--text);
+  }
+  .revLockedIcon{ font-size:44px; margin-bottom:14px; opacity:.7; }
+  .revLocked h3{ font-size:16px; color:var(--gold); margin-bottom:10px; }
+  .revLocked p{ font-size:12.5px; opacity:.8; line-height:1.6; max-width:280px; }
+  .revLocked .revLockedSub{ opacity:.55; font-size:11.5px; margin-top:4px; }
+
+  /* ---- Эпоха 1: Газета (ретро) ---- */
+  .revEra.newspaper{
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.025) 0px, rgba(0,0,0,.025) 1px, transparent 1px, transparent 3px),
+      radial-gradient(ellipse at top left, #efe3c2, #e3d3a0 60%, #d8c48c 100%);
+    color:#2b2013; font-family:"Georgia","Times New Roman",serif; padding:54px 18px 24px;
+  }
+  .npMasthead{ text-align:center; border-bottom:4px double #2b2013; padding-bottom:8px; margin-bottom:10px; }
+  .npMasthead h2{ font-size:28px; letter-spacing:2px; text-transform:uppercase; margin-bottom:2px; }
+  .npMasthead .npSub{ font-size:11px; letter-spacing:3px; text-transform:uppercase; opacity:.75; }
+  .npMasthead .npDate{ font-size:10.5px; margin-top:4px; font-style:italic; opacity:.8; }
+  .npColumns{ column-count:2; column-gap:16px; column-rule:1px solid rgba(43,32,19,.4); }
+  .npEmpty{
+    column-span:all; text-align:center; font-style:italic; opacity:.75; font-size:13px;
+    padding:40px 10px; line-height:1.6;
+  }
+  .npArticle{
+    break-inside:avoid; margin-bottom:14px; cursor:pointer;
+    animation:npArticleIn .4s ease both;
+  }
+  @keyframes npArticleIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+  .npArticle h3{
+    font-size:14.5px; line-height:1.25; margin-bottom:4px; text-transform:uppercase;
+    border-bottom:1px solid rgba(43,32,19,.35); padding-bottom:3px;
+  }
+  .npArticle .npMeta{ font-size:10px; font-style:italic; opacity:.7; margin-bottom:5px; }
+  .npArticle p{ font-size:12px; line-height:1.55; text-align:justify; }
+  .npArticle p:first-letter{ font-size:22px; font-weight:700; float:left; line-height:1; padding-right:3px; }
+  .npArticle .npMore{ display:none; }
+  .npArticle.expanded .npMore{ display:inline; }
+  .npArticle .npToggle{ font-size:10.5px; color:#7a3b1e; text-decoration:underline; display:inline-block; margin-top:3px; }
+
+  /* ---- Эпоха 2: Ранние ПК (веб 90-х), рамка CRT-монитора ---- */
+  .revEra.web90{ background:#4a4d44; padding:22px 14px 26px; }
+  .crtShell{
+    background:linear-gradient(#ded9c8,#b9b39e); border-radius:22px; padding:16px 14px 22px;
+    box-shadow:0 12px 26px rgba(0,0,0,.5), inset 0 0 0 2px #8f8a76;
+    position:relative;
+  }
+  .crtShell::before{
+    content:""; position:absolute; left:50%; bottom:6px; transform:translateX(-50%);
+    width:70px; height:8px; background:#8f8a76; border-radius:3px;
+  }
+  .crtBrand{ text-align:center; font-size:9px; letter-spacing:3px; color:#5a563f; margin-bottom:6px; font-family:Arial,sans-serif; }
+  .crtScreen{
+    background:#000818; border-radius:6px; padding:0; overflow:hidden; position:relative;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.85), inset 0 0 0 6px #14161a;
+  }
+  .crtScreen::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0px, rgba(255,255,255,.035) 1px, transparent 1px, transparent 2px);
+  }
+  .web90Page{ font-family:"Courier New",monospace; color:#39ff6a; padding:12px; min-height:380px; font-size:12px; }
+  .web90Page marquee{
+    display:block; background:#000; color:#ffe600; border:2px dashed #ffe600; padding:4px 0;
+    font-weight:700; font-size:12.5px; margin-bottom:10px;
+  }
+  .web90Title{
+    text-align:center; color:#00eaff; font-size:20px; font-weight:700; text-shadow:2px 2px 0 #ff00c8;
+    border:3px double #00eaff; padding:8px; margin-bottom:8px; letter-spacing:1px;
+  }
+  .web90Hr{ border:none; border-top:2px dashed #ff00c8; margin:10px 0; }
+  .web90Counter{ text-align:center; font-size:10.5px; color:#ffe600; margin-bottom:8px; }
+  .web90Counter b{ background:#000; border:1px solid #ffe600; padding:1px 6px; font-family:monospace; }
+  .web90Post{ border:1px solid #ffe600; padding:8px; margin-bottom:10px; background:rgba(255,230,0,.04); }
+  .web90Post .who{ color:#ff6ac1; font-weight:700; font-size:11.5px; }
+  .web90Post .when{ color:#7a8a90; font-size:10px; margin-left:6px; }
+  .web90Post p{ color:#39ff6a; margin-top:4px; line-height:1.5; }
+  .web90Post .subj{ color:#00eaff; font-weight:700; display:block; margin-bottom:3px; }
+  .web90Guestbook{ border:2px solid #00eaff; padding:8px; margin-top:8px; }
+  .web90Guestbook label{ display:block; color:#ffe600; font-size:10.5px; margin-bottom:4px; }
+  .web90Guestbook input{
+    width:100%; background:#000; color:#39ff6a; border:1px solid #39ff6a; font-family:"Courier New",monospace;
+    padding:6px; font-size:11.5px; margin-bottom:6px;
+  }
+  .web90Guestbook button{
+    background:#ffe600; color:#000; font-family:"Courier New",monospace; font-weight:700;
+    border:2px outset #fff6b0; padding:6px 12px; font-size:11px;
+  }
+  .web90Blink{ animation:web90blink 1s step-start infinite; }
+  @keyframes web90blink{ 50%{ opacity:0; } }
+
+  /* ---- Эпоха 3: современный интерфейс ---- */
+  .revEra.modern{ background:var(--panel); padding:54px 14px 24px; font-family:inherit; }
+  .modHeader{ margin-bottom:14px; }
+  .modHeader h2{ font-size:17px; color:var(--text); margin-bottom:2px; }
+  .modHeader .modSub{ font-size:11.5px; opacity:.55; }
+  .modStatsLine{
+    background:var(--panel2); border:1px solid var(--border); border-radius:9px;
+    padding:8px 11px; font-size:11.5px; opacity:.9; margin-bottom:12px; line-height:1.5;
+  }
+  .modStatsLine b{ color:var(--accent); }
+  .modFilters{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .modFilterBtn{
+    padding:5px 11px; font-size:11px; border-radius:16px; background:var(--panel2); color:var(--text);
+  }
+  .modFilterBtn.active{ background:var(--accent); color:#0b0e14; }
+  .modCard{
+    background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:12px;
+    margin-bottom:10px;
+  }
+  .modCardHead{ display:flex; align-items:center; gap:9px; margin-bottom:7px; }
+  .modAvatar{
+    width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center;
+    justify-content:center; font-size:13px; font-weight:700; color:#fff;
+  }
+  .modName{ font-size:12.5px; font-weight:700; }
+  .modWhen{ font-size:10.5px; opacity:.5; }
+  .modStars{ font-size:11px; color:var(--gold); margin-left:auto; white-space:nowrap; }
+  .modText{ font-size:12px; line-height:1.55; opacity:.9; margin-bottom:8px; }
+  .modTags{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .modTag{ font-size:10px; padding:3px 9px; border-radius:12px; font-weight:700; }
+  .modCardFoot{ display:flex; align-items:center; gap:10px; }
+  .modLikeBtn{
+    background:transparent; color:#9aa0ac; padding:4px 10px; font-size:11px; border:1px solid var(--border); border-radius:16px;
+  }
+  .modLikeBtn.liked{ background:rgba(95,168,255,.15); color:var(--accent); border-color:var(--accent); }
+
+  /* ---- Настройки ---- */
+  #settingsModal{
+    position:fixed; inset:0; background:rgba(8,9,13,.75); display:none;
+    align-items:center; justify-content:center; z-index:85; padding:16px;
+  }
+  #settingsBox{
+    width:360px; max-width:100%; background:var(--panel); border:2px solid var(--border);
+    border-radius:14px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,.6);
+  }
+  .setSection{ margin-bottom:16px; }
+  .setLabel{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:8px; }
+  .setQualityRow{ display:flex; gap:6px; margin-bottom:6px; }
+  .qBtn{ flex:1; padding:9px 4px; font-size:12px; background:#3a4152; color:var(--text); border-radius:8px; }
+  .diffBtn{ flex:1; padding:9px 4px; font-size:12px; background:#3a4152; color:var(--text); border-radius:8px; }
+  .diffBtn.active{ background:var(--accent); color:#0b0e14; }
+  .qBtn.active{ background:var(--accent); color:#0b0e14; }
+  .setHint{ font-size:11px; opacity:.55; line-height:1.5; }
+  .setCheck{ display:flex; align-items:center; gap:8px; font-size:12.5px; padding:6px 2px; cursor:pointer; }
+  .setCheck input{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+
+  /* ---- Слой сезонных визуальных эффектов поверх карты ---- */
+  #fxCanvas{ position:absolute; top:0; left:0; background:transparent; pointer-events:none; }
+
+  /* ---- Список сохранений (5 слотов) ---- */
+  #savesModal{
+    position:fixed; inset:0; background:rgba(8,9,13,.75); display:none;
+    align-items:center; justify-content:center; z-index:86; padding:16px;
+  }
+  #savesBox{
+    width:420px; max-width:100%; max-height:82vh; overflow:auto;
+    background:var(--panel); border:2px solid var(--border); border-radius:14px;
+    padding:16px; box-shadow:0 18px 40px rgba(0,0,0,.6);
+  }
+  .saveRow{
+    background:var(--panel2); border:1px solid var(--border); border-radius:10px;
+    padding:10px; margin-bottom:8px;
+  }
+  .saveRowMain{ margin-bottom:8px; }
+  .saveNameInput{
+    width:100%; background:#171a21; color:var(--text); border:1px solid var(--border);
+    border-radius:7px; padding:6px 8px; font:inherit; font-size:12.5px; margin-bottom:4px;
+  }
+  .saveDate{ font-size:11px; opacity:.6; padding-left:2px; }
+  .saveRowActions{ display:flex; gap:6px; }
+  .saveActBtn{ flex:1; padding:7px 4px; font-size:11.5px; background:#3a4152; color:var(--text); border-radius:7px; }
+  .saveLoadBtn{ background:var(--accent); color:#0b0e14; flex:1.4; }
+  .savePinBtn.active{ background:var(--gold); color:#2a1a00; }
+  .saveDelBtn:hover{ background:var(--danger); color:#fff; }
+  #fxLayer{
+    position:absolute; inset:0; pointer-events:none; border-radius:6px; overflow:hidden;
+    transition:background-color 1.2s ease;
+  }
+</style>
+</head>
+<body>
+
+<h1>Metro <span>Tycoon</span><small>прототип · 1930</small></h1>
+
+<div id="hud">
+  <div class="stat"><div class="v" id="yearV">1930</div><div class="k">Год</div></div>
+  <div class="stat"><div class="v" id="monthV">Январь</div><div class="k">Месяц</div></div>
+  <div class="stat" id="moneyStat"><div class="v" id="moneyV">$50 000</div><div class="k">Казна</div></div>
+  <div class="stat"><div class="v" id="gridV">60×60</div><div class="k">Размер города</div></div>
+  <div class="stat"><div class="v" id="stCountV">0</div><div class="k">Станций</div></div>
+  <div class="stat"><div class="v" id="lnCountV">0</div><div class="k">Линий</div></div>
+  <button id="btnPause">▶ Пуск</button>
+  <button id="btnRestart" class="secondary">↻ Новая игра</button>
+  <button id="btnTutorial" class="secondary">❓ Туториал</button>
+  <button id="btnSave" class="secondary">💾 Сохранить</button>
+  <button id="btnLoad" class="secondary">📂 Загрузить</button>
+  <button id="btnSettings" class="secondary">⚙ Настройки</button>
+  <div class="sliderBox">
+    <span class="lab">Частота изменений города</span>
+    <input id="freq" type="range" min="1" max="5" step="1" value="2">
+    <span id="freqV">2</span>
+  </div>
+</div>
+
+<div id="econRow">
+  <button id="btnStation" class="secondary">🚉 Построить станцию ($5 000)</button>
+  <div class="sliderBox">
+    <span class="lab">Цена билета</span>
+    <input id="price" type="range" min="1" max="10" step="1" value="3">
+    <span id="priceV">$3</span>
+  </div>
+</div>
+
+<div id="bar"><div id="barFill"></div></div>
+
+<div id="appRow">
+  <div id="mainCol">
+    <div id="stageScroll">
+      <div id="stage">
+        <canvas id="cv" width="840" height="840"></canvas>
+        <canvas id="fxCanvas"></canvas>
+        <div id="fxLayer"></div>
+        <div id="overlay"><div id="ovBig">ПАУЗА</div><div id="ovSub">Нажмите «Пуск», чтобы продолжить</div></div>
+      </div>
+    </div>
+    <div id="log"></div>
+    <div id="legend"></div>
+  </div>
+
+  <div id="sidePanel">
+    <h2>Линии метро</h2>
+    <div class="row">
+      <button id="btnAddLine">+ Добавить линию</button>
+    </div>
+    <div class="row" id="addLineForm" style="display:none;">
+      <input id="newLineName" type="text" placeholder="Название линии" maxlength="30">
+      <button id="btnConfirmLine">✓</button>
+    </div>
+    <select id="lineSelect"><option value="">— нет линий —</option></select>
+    <div class="row">
+      <button id="btnAttach" class="secondary" disabled>📍 Привязать станцию</button>
+    </div>
+    <div id="lineStations"><div class="empty">Выберите или создайте линию, затем нажмите «Привязать станцию» и кликните по станции на карте.</div></div>
+    <div class="hint">Кликните по станции на карте или по её названию в списке, чтобы открыть редактор станции: переименование, выходы, переходы, планировку и дизайн.</div>
+  </div>
+</div>
+
+<div id="stationModal">
+  <div id="stationModalBox">
+    <div class="smHeader">
+      <span id="smTitle">Станция</span>
+      <button id="smClose">✕</button>
+    </div>
+    <div id="smBody">
+      <div id="smPreviewCol">
+        <div class="smPreviewLabel">Вид сбоку (Side View)</div>
+        <canvas id="smSideCanvas" width="260" height="120"></canvas>
+        <div class="smPreviewLabel">Вид сверху (Top View)</div>
+        <canvas id="smTopCanvas" width="260" height="120"></canvas>
+        <div id="smCostBox">
+          <div>Стоимость станции: <b id="smCostV">$5 000</b></div>
+          <div>Содержание/мес: <b id="smUpkeepV">$100</b></div>
+          <div>Ориент. пассажиропоток: <b id="smFlowV">—</b></div>
+        </div>
+        <div id="smPendingDelta"></div>
+        <div id="smPendingBar">
+          <button id="smCancelDesign" class="secondary" disabled>↩ Отменить</button>
+          <button id="smSaveDesign" disabled>💾 Сохранить дизайн</button>
+        </div>
+      </div>
+      <div id="smControlsCol">
+        <div id="smTabs">
+          <button class="smTabBtn active" data-tab="overview">Обзор</button>
+          <button class="smTabBtn" data-tab="layout">Планировка</button>
+          <button class="smTabBtn" data-tab="descent">Спуск</button>
+          <button class="smTabBtn" data-tab="design">Дизайн</button>
+        </div>
+
+        <div id="smTabOverview" class="smTab active">
+          <div class="smRow">
+            <input id="smNameInput" type="text" maxlength="30">
+            <button id="smSaveName">Сохранить</button>
+          </div>
+          <button id="smAddExit" class="secondary smFullBtn">🚶 Добавить выход ($1 000)</button>
+          <div class="smExitTypeRow" id="smExitTypeRow" style="display:none;"></div>
+          <button id="smExitAddBtn" class="smFullBtn" style="display:none;" disabled>➕ Добавить</button>
+          <button id="smAddTransfer" class="secondary smFullBtn">🔀 Создать переход ($2 000)</button>
+          <button id="smConserve" class="secondary smFullBtn">🚧 Законсервировать станцию</button>
+          <div id="smInfo"></div>
+        </div>
+
+        <div id="smTabLayout" class="smTab"></div>
+        <div id="smTabDescent" class="smTab"></div>
+        <div id="smTabDesign" class="smTab"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="savesModal">
+  <div id="savesBox">
+    <div class="smHeader">
+      <span>📂 Сохранения (макс. 5)</span>
+      <button id="savesClose">✕</button>
+    </div>
+    <div id="savesList"></div>
+    <div class="setHint" id="savesEmptyHint">Нет сохранений — нажмите «💾 Сохранить», чтобы создать первое.</div>
+  </div>
+</div>
+
+<div id="settingsModal">
+  <div id="settingsBox">
+    <div class="smHeader">
+      <span>⚙ Настройки</span>
+      <button id="setClose">✕</button>
+    </div>
+    <div class="setSection">
+      <div class="setLabel">Качество графики</div>
+      <div class="setQualityRow" id="qualityRow">
+        <button class="qBtn" data-q="low">Низкое</button>
+        <button class="qBtn" data-q="medium">Среднее</button>
+        <button class="qBtn" data-q="high">Высокое</button>
+      </div>
+      <div class="setHint">Низкое — отключает анимации, частицы и тонировку сезонов, снижает частоту перерисовки. Помогает на слабых устройствах.</div>
+    </div>
+    <div class="setSection">
+      <div class="setLabel">Сезонные эффекты</div>
+      <label class="setCheck"><input type="checkbox" id="setTint" checked> Цветовая тонировка сезона</label>
+      <label class="setCheck"><input type="checkbox" id="setParticles" checked> Частицы (снег / дождь / листья)</label>
+      <label class="setCheck"><input type="checkbox" id="setAnim" checked> Плавные анимации смены застройки</label>
+    </div>
+    <div class="setSection">
+      <div class="setLabel">Сложность</div>
+      <div class="setQualityRow" id="difficultyRow">
+        <button class="diffBtn" data-diff="normal">Нормальная</button>
+        <button class="diffBtn" data-diff="easy">Лёгкая</button>
+      </div>
+      <div class="setHint">Лёгкая: старт с $100 000, всегда максимальный пассажиропоток (как в лучший сезон), без сезонных спадов и без влияния войны/кризиса 2008 года. Вступает в силу с новой игры (кроме потока — он меняется сразу).</div>
+    </div>
+  </div>
+</div>
+
+<div id="tutorialModal">
+  <div id="tutorialBox">
+    <div class="smHeader">
+      <span>📖 Обучение</span>
+      <button id="tutClose">✕</button>
+    </div>
+    <div id="tutContent"></div>
+    <div id="tutDots"></div>
+    <div id="tutNav">
+      <button id="tutPrev" class="secondary">← Назад</button>
+      <span id="tutPageIndicator">1 / 11</span>
+      <button id="tutNext">Далее →</button>
+    </div>
+  </div>
+</div>
+
+<button id="revTab" title="Отзывы пассажиров">💬 ОТЗЫВЫ ПАССАЖИРОВ</button>
+<div id="revPanel">
+  <button id="revCloseX" title="Закрыть">✕</button>
+  <div id="revEraTabs">
+    <button class="revEraBtn active" data-era="newspaper">📰 1930-е</button>
+    <button class="revEraBtn" data-era="web90">💾 1990-е</button>
+    <button class="revEraBtn" data-era="modern">📱 2020-е</button>
+  </div>
+  <div id="revBody">
+    <div id="revNewspaper" class="revEra newspaper active"></div>
+    <div id="revWeb90" class="revEra web90"></div>
+    <div id="revModern" class="revEra modern"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= КОНСТАНТЫ ================= */
+const TS = 14;                              // размер плитки в пикселях
+const MONTH_MS = 3000;                      // 1 месяц = 3 секунды
+const UPKEEP = 500;                         // ежемесячное обслуживание города
+const STATION_COST = 5000;                  // базовая стоимость постройки станции (стоковый дизайн)
+const STATION_UPKEEP = 100;                 // базовое ежемесячное обслуживание станции
+const EXIT_COST = 1000;                     // стоимость дополнительного выхода
+const EXIT_MAX_DIST = 4;                    // максимальное расстояние выхода от станции (в клетках)
+const TRANSFER_COST = 2000;                 // стоимость ручного создания перехода
+const TRANSFER_BOOST = 1.25;                // прирост пассажиропотока на пересадочном узле
+
+// ---- Опции конструктора станций ----
+const PLATFORM_OPTS = [
+  { key:"island",  label:"Островная",     cost:0,    upkeep:0,   mul:1.00 },
+  { key:"shore",   label:"Береговая",     cost:1500, upkeep:50,  mul:1.15 },
+  { key:"twoLevel",label:"Двухъярусная",  cost:8000, upkeep:300, mul:1.60 },
+];
+const COLUMNS_OPTS = [
+  { key:"none",   label:"Без колонн",       cost:0,   mul:1.00 },
+  { key:"center", label:"Колонны по центру",cost:500, mul:0.95 },
+  { key:"edge",   label:"Колонны по краям", cost:800, mul:1.00 },
+];
+const LENGTH_OPTS = [
+  { key:"short",    label:"Короткая (2 вагона)",    cost:0,    mul:0.60 },
+  { key:"standard", label:"Стандартная (4 вагона)", cost:2000, mul:1.00 },
+  { key:"long",     label:"Длинная (6 вагонов)",    cost:5000, mul:1.40 },
+];
+const FLOOR_OPTS = [
+  { key:"concrete", label:"Серый бетон",          cost:0    },
+  { key:"tile",     label:"Керамогранитная плитка",cost:2000 },
+  { key:"terrazzo", label:"Полированное терраццо", cost:4200 },
+  { key:"marble",   label:"Шлифованный мрамор",   cost:6000 },
+  { key:"goldMarble",label:"Светлый мрамор с золотом",cost:9800 },
+];
+const WALLS_OPTS = [
+  { key:"whitewash", label:"Побелка",              cost:0    },
+  { key:"ceramic",   label:"Керамическая плитка",  cost:1500 },
+  { key:"granite",   label:"Гранитные плиты",      cost:4000 },
+  { key:"darkGranite",label:"Тёмный гранит",       cost:6500 },
+  { key:"glass",     label:"Стеклянные панели",    cost:8200 },
+  { key:"mosaic",    label:"Художественная мозаика",cost:9000 },
+  { key:"starlight", label:"Витраж «Звёздное небо»",cost:14000 },
+];
+const LIGHT_OPTS = [
+  { key:"bulbs",       label:"Голые лампы накаливания",  cost:0    },
+  { key:"fluorescent", label:"Люминесцентные линии",     cost:1000 },
+  { key:"neon",        label:"Светодиодный неон",        cost:3000 },
+  { key:"chandelier",  label:"Хрустальные люстры",       cost:7000 },
+];
+const COLSTYLE_OPTS = [
+  { key:"square", label:"Простые квадратные",     cost:0    },
+  { key:"fluted", label:"Круглые с канелюрами",    cost:1500 },
+  { key:"doric",  label:"Дорические мраморные",    cost:4000 },
+  { key:"chrome", label:"Футуристичный хром",      cost:6000 },
+];
+const TURNSTILE_OPTS = [
+  { key:"tripod", label:"Трёхспицевый турникет",     cost:0,    upkeep:0,  mul:1.00 },
+  { key:"gates",  label:"Двустворчатые дверцы",      cost:1800, upkeep:40, mul:1.12 },
+  { key:"rotary", label:"Вращающийся вертикальный",  cost:3200, upkeep:70, mul:1.22 },
+];
+const RESTROOM_COST=1500, RESTROOM_UPKEEP=80;
+const SHOP_COST=3000, SHOP_UPKEEP=150, SHOP_REVENUE_PER_PASSENGER=0.6, SHOP_BASE_RENT=60;
+const SIGNAGE_COST=1200, SIGNAGE_UPKEEP=40, SIGNAGE_MUL=1.10;
+const WIFI_COST=1800, WIFI_UPKEEP=60, WIFI_MIN_YEAR=2010; // Wi-Fi доступен только с 2010-х годов
+const CONSERVATION_UPKEEP=50; // минимальное содержание законсервированной (закрытой) станции в месяц
+// Типы спусков на станцию: у каждого своя цена, содержание и вклад в пропускную способность
+// (эскалатор и лифт пропускают пассажиров быстрее лестницы, но дороже в обслуживании).
+const EXIT_TYPE_OPTS = {
+  stairs:    { label:"Лестница",  icon:"🪜", cost:1000, upkeep:20, capMul:1.00 },
+  escalator: { label:"Эскалатор", icon:"⬆️", cost:2200, upkeep:70, capMul:1.18 },
+  elevator:  { label:"Лифт",      icon:"🛗", cost:2800, upkeep:90, capMul:1.10 },
+};
+
+const FLOOR_COLOR = { concrete:"#8b8f94", tile:"#c9b896", terrazzo:"#c8b8a8", marble:"#e8e2d5", goldMarble:"#f0e2b8" };
+const WALL_COLOR  = { whitewash:"#e5e1d6", ceramic:"#bcd4dc", granite:"#5c5450", darkGranite:"#33302e", glass:"#a8ccd8", mosaic:"#7a4a6b", starlight:"#1c2a5e" };
+const LIGHT_COLOR = { bulbs:"#e8c143", fluorescent:"#eaf2ff", neon:"#5fe0ff", chandelier:"#ffe9a8" };
+const COLSTYLE_COLOR = { square:"#9aa0a8", fluted:"#c9c2b0", doric:"#e8e2d5", chrome:"#d7dee6" };
+
+/* ---- Вкладка «Спуск»: лестница (всегда одна) + эскалаторы + лифты, отдельно от
+   географических «выходов». Это про собственную инфраструктуру самой станции. ---- */
+const STAIRS_MATERIAL_OPTS = [
+  { key:"concrete", label:"Бетонные ступени",       cost:0    },
+  { key:"metal",    label:"Металлические ступени",  cost:800  },
+  { key:"stone",    label:"Каменные ступени",        cost:1600 },
+];
+const ESCALATOR_MATERIAL_OPTS = [
+  { key:"wood", label:"Деревянные (ретро)", cost:1600, upkeep:95 }, // дешевле, но требует больше ухода
+  { key:"iron", label:"Металлические",      cost:2200, upkeep:70 },
+];
+const ELEVATOR_DOOR_OPTS = [
+  { key:"folding", label:"Створчатые двери",  cost:3000 },
+  { key:"sliding", label:"Раздвижные двери",  cost:3500 },
+];
+const RAMP_COST=900, RAMP_UPKEEP=15, RAMP_CAP_BONUS=0.04; // пандус — дешёвая альтернатива лифту, эффект скромнее
+const ELEVATOR_UPKEEP_PER_UNIT=90;
+const ELEVATOR_MAX=3, ESCALATOR_MAX=6;
+const STAIRS_MATERIAL_COLOR = { concrete:"#9aa0a8", metal:"#b7bfc6", stone:"#b3a48c" };
+
+// Типы плиток
+const T = { EMPTY:0, RIVER:1, MAIN:2, ROAD:3, BRIDGE:4, BIZ:5, RES:6, IND:7, SHOP:8, OFC:9,
+            PARK:10, SCHOOL:11, UNIV:12, AIRPORT:13 };
+
+// Что не может менять «живой город»: река, дороги, мосты, Деловой Центр и особые кварталы
+const LOCKED = [0,1,1,1,1,1,0,0,0,1, 1,1,1,1];
+
+// Цвета плиток
+const C = {};
+C[T.EMPTY]=[219,213,194]; C[T.RIVER]=[43,107,175];  C[T.MAIN]=[45,49,57];
+C[T.ROAD] =[154,159,167]; C[T.BRIDGE]=[126,84,46];  C[T.BIZ] =[189,60,48];
+C[T.RES]  =[66,152,88];   C[T.IND]  =[103,110,122]; C[T.SHOP] =[227,192,60];
+C[T.OFC]  =[110,28,60];   // бордовый — офисы/небоскрёбы
+C[T.PARK]=[86,163,74]; C[T.SCHOOL]=[196,132,64]; C[T.UNIV]=[92,72,158]; C[T.AIRPORT]=[176,196,214];
+
+const NAMES = {0:"Пустырь",1:"Река",2:"Главная дорога",3:"Второстеп. дорога",4:"Мост",5:"Деловой центр",6:"Спальный район",7:"Промзона",8:"Торговые ряды",9:"Офисы/небоскрёбы",
+  10:"Парк",11:"Школа",12:"Университет",13:"Аэропорт"};
+const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+const LINE_COLORS = ["#ff5f52","#5fa8ff","#7ee081","#e8c143","#c17ee0","#ff8f4d","#4dd0e1","#ff4da6","#9adc4c","#ffb3c6"];
+const UNIV_MIN_YEAR = 1950, AIRPORT_MIN_YEAR = 1962; // особые кварталы появляются только начиная с этих лет
+
+/* ================= СОСТОЯНИЕ КАРТЫ ================= */
+let G = 60, N = G*G;
+let grid, zone, orient, access, animT, animFrom;   // выделяются в allocArrays()
+
+let riverHorizontal = true;   // ориентация реки (нужна для расширения границ)
+
+let year = 1930, month = 0;
+let money = 50000;
+let running = false, bankrupt = false;
+let freq = 2;                 // частота изменений города (1..5)
+let elapsed = 0, last = performance.now();
+let BCX = 15, BCY = 15;       // центр Делового Центра (перекрёсток магистралей)
+let MRY = 0, MRX = 0;         // ряд/колонка главных дорог
+let SEC_R = [], SEC_C = [];   // второстепенные дороги
+
+let expanded90 = false, expanded120 = false;   // флаги расширения границ
+let universitySpawned = false, airportSpawned = false;
+
+/* ---- Настройки производительности и визуальных эффектов ---- */
+let quality = "medium";              // "low" | "medium" | "high"
+let difficulty = "normal";           // "normal" | "easy"
+let fxTintEnabled = true, fxParticlesEnabled = true, fxAnimEnabled = true;
+let activeAnimCount = 0;             // сколько клеток сейчас в процессе анимации смены
+let lastDrawTs = 0;
+const RENDER_THROTTLE = { low:180, medium:70, high:16 }; // мс между полными перерисовками карты
+const CATCHMENT_INTERVAL = { low:6, medium:3, high:1 };  // раз в сколько месяцев пересчитывать пассажиропоток
+let cachedCatchments = null, catchmentsDirty = true, monthsSinceCatchmentRecalc = 0;
+function invalidateCatchments(){ catchmentsDirty = true; }
+
+/* ================= СТАНЦИИ И ЛИНИИ ================= */
+let stations = [];            // {id,name,x,y,lastPassengers,exits:[{x,y}],design:{...}}
+let nextStationId = 1;
+let stationIdxSet = new Set(); // множество индексов клеток со станциями
+let exitIdxSet = new Set();    // множество индексов клеток с выходами
+
+let lines = [];                // {id,name,color,stationIds:[]}
+let nextLineId = 1;
+let activeLineId = null;
+
+let transfers = [];            // {a:stationId, b:stationId} — ручные пересадочные переходы
+
+let ticketPrice = 3;
+let mode = "none";             // "none" | "station" | "attach" | "exit" | "transfer"
+let selectedStationId = null;  // станция, открытая в модальном окне
+let pendingStationId = null;   // станция-источник для режимов "exit"/"transfer"
+
+/* ================= DOM ================= */
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const fxCanvas = $("fxCanvas"), fxCtx = fxCanvas.getContext("2d");
+const fxLayer = $("fxLayer");
+const elYear = $("yearV"), elMonth = $("monthV"), elMoney = $("moneyV"), elGrid = $("gridV");
+const elStCount = $("stCountV"), elLnCount = $("lnCountV");
+const btnPause = $("btnPause"), btnRestart = $("btnRestart");
+const elFreq = $("freq"), elFreqV = $("freqV");
+const elPrice = $("price"), elPriceV = $("priceV");
+const overlay = $("overlay"), ovBig = $("ovBig"), ovSub = $("ovSub");
+const elLog = $("log"), barFill = $("barFill");
+const btnStation = $("btnStation");
+const btnAddLine = $("btnAddLine"), lineSelect = $("lineSelect");
+const addLineForm = $("addLineForm"), newLineName = $("newLineName"), btnConfirmLine = $("btnConfirmLine");
+const btnAttach = $("btnAttach"), lineStationsBox = $("lineStations");
+
+const stationModal = $("stationModal"), smTitle = $("smTitle"), smClose = $("smClose");
+const smNameInput = $("smNameInput"), smSaveName = $("smSaveName");
+const smAddExit = $("smAddExit"), smAddTransfer = $("smAddTransfer"), smInfo = $("smInfo");
+const smExitTypeRow = $("smExitTypeRow");
+const smExitAddBtn = $("smExitAddBtn");
+const smConserve = $("smConserve");
+const smSaveDesign = $("smSaveDesign"), smCancelDesign = $("smCancelDesign"), smPendingDelta = $("smPendingDelta");
+const smSideCanvas = $("smSideCanvas"), smTopCanvas = $("smTopCanvas");
+const smSideCtx = smSideCanvas.getContext("2d"), smTopCtx = smTopCanvas.getContext("2d");
+const smCostV = $("smCostV"), smUpkeepV = $("smUpkeepV"), smFlowV = $("smFlowV");
+const smTabButtons = document.querySelectorAll(".smTabBtn");
+const smTabOverview = $("smTabOverview"), smTabLayout = $("smTabLayout"), smTabDescent = $("smTabDescent"), smTabDesign = $("smTabDesign");
+
+const btnTutorial = $("btnTutorial");
+const btnSave = $("btnSave"), btnLoad = $("btnLoad");
+const btnSettings = $("btnSettings"), settingsModal = $("settingsModal"), setClose = $("setClose");
+const savesModal = $("savesModal"), savesClose = $("savesClose"), savesListEl = $("savesList"), savesEmptyHint = $("savesEmptyHint");
+const qualityButtons = document.querySelectorAll(".qBtn");
+const difficultyButtons = document.querySelectorAll(".diffBtn");
+const setTintChk = $("setTint"), setParticlesChk = $("setParticles"), setAnimChk = $("setAnim");
+const tutorialModal = $("tutorialModal"), tutClose = $("tutClose"), tutContent = $("tutContent");
+const tutDots = $("tutDots"), tutPrev = $("tutPrev"), tutNext = $("tutNext"), tutPageIndicator = $("tutPageIndicator");
+
+const revTab = $("revTab"), revPanel = $("revPanel"), revCloseX = $("revCloseX");
+const revEraButtons = document.querySelectorAll(".revEraBtn");
+const revNewspaperEl = $("revNewspaper"), revWeb90El = $("revWeb90"), revModernEl = $("revModern");
+
+// Легенда
+(function buildLegend(){
+  const box = $("legend");
+  for (const t of [0,1,2,3,4,5,6,7,8,9,10,11,12,13]){
+    const c = C[t];
+    const s = document.createElement("span");
+    s.innerHTML = '<i style="background:rgb('+c[0]+','+c[1]+','+c[2]+')"></i>' + NAMES[t];
+    box.appendChild(s);
+  }
+  const s2 = document.createElement("span");
+  s2.innerHTML = '<i style="background:#1a2740;border-color:#5fa8ff"></i>Станция метро (М)';
+  box.appendChild(s2);
+  const s3 = document.createElement("span");
+  s3.innerHTML = '<i style="background:#101830;border-color:#5fa8ff"></i>Выход из метро';
+  box.appendChild(s3);
+  const s4 = document.createElement("span");
+  s4.innerHTML = '<i style="background:#e8e6df;border-color:#111"></i>Пересадочный узел';
+  box.appendChild(s4);
+})();
+
+/* ================= УТИЛИТЫ ================= */
+function rnd(n){ return (Math.random()*n)|0; }
+function pick(a){ return a[rnd(a.length)]; }
+function idx(x,y){ return y*G + x; }
+function clamp(v,a,b){ return v<a ? a : (v>b ? b : v); }
+function hsh(x,y){ let h=(x*374761393 + y*668265263)|0; h=((h^(h>>>13))*1274126177)|0; return (h^(h>>>16))>>>0; }
+function pr(h,n){ return ((h >>> ((n*3)%30)) & 255) / 255; }
+function rgb(c){ return "rgb("+c[0]+","+c[1]+","+c[2]+")"; }
+function money$(v){ return "$" + Math.round(v).toLocaleString("ru-RU"); }
+
+function log(msg){
+  const d = document.createElement("div");
+  d.textContent = year + " " + MONTHS[month] + ": " + msg;
+  elLog.appendChild(d);
+  while (elLog.children.length > 6) elLog.removeChild(elLog.firstChild);
+}
+function updateHUD(){
+  elYear.textContent = year;
+  elMonth.textContent = MONTHS[month];
+  elMoney.textContent = "$" + money.toLocaleString("ru-RU");
+  elMoney.style.color = money < 3000 ? "#ff6257" : "";
+  elGrid.textContent = G + "×" + G;
+  elStCount.textContent = stations.length;
+  elLnCount.textContent = lines.length;
+}
+function setOverlay(big, sub, show){
+  ovBig.textContent = big;
+  ovSub.textContent = sub || "";
+  overlay.style.display = show ? "flex" : "none";
+}
+
+/* ================= ВЫДЕЛЕНИЕ МАССИВОВ КАРТЫ ================= */
+function allocArrays(newG){
+  G = newG; N = G*G;
+  grid = new Uint8Array(N);
+  zone = new Uint8Array(N).fill(1);
+  orient = new Uint8Array(N);
+  access = new Uint8Array(N);
+  animT = new Float64Array(N).fill(-1);
+  animFrom = new Uint8Array(N);
+  cv.width = G*TS; cv.height = G*TS; fxCanvas.width = G*TS; fxCanvas.height = G*TS;
+}
+
+/* ================= ГЕНЕРАЦИЯ ГОРОДА (старт 60×60) ================= */
+function genCity(){
+  allocArrays(60);
+  makeRiver();
+  makeRoads();
+  carveDistricts();
+  bakeAccess();
+}
+
+/* --- Река: змейка слева-направо или сверху-вниз --- */
+function wander(v){
+  const r = Math.random();
+  if (r < 0.35 && v > 3) v--;
+  else if (r > 0.65 && v < G-4) v++;
+  return v;
+}
+function wanderBounded(v, maxV){
+  const r = Math.random();
+  if (r < 0.35 && v > 3) v--;
+  else if (r > 0.65 && v < maxV-4) v++;
+  return v;
+}
+function makeRiver(){
+  riverHorizontal = Math.random() < 0.5;
+  if (riverHorizontal){
+    let y = 8 + rnd(G-16);
+    for (let x=0; x<G; x++){
+      let i = idx(x,y); grid[i]=T.RIVER; zone[i]=0;
+      if (Math.random() < 0.18){
+        const yy = clamp(y + (y < G-2 ? 1 : -1), 0, G-1);
+        const j = idx(x,yy); grid[j]=T.RIVER; zone[j]=0;
+      }
+      y = wander(y);
+    }
+  } else {
+    let x = 8 + rnd(G-16);
+    for (let y=0; y<G; y++){
+      let i = idx(x,y); grid[i]=T.RIVER; zone[i]=0;
+      if (Math.random() < 0.18){
+        const xx = clamp(x + (x < G-2 ? 1 : -1), 0, G-1);
+        const j = idx(xx,y); grid[j]=T.RIVER; zone[j]=0;
+      }
+      x = wander(x);
+    }
+  }
+}
+
+/* --- Дороги: две магистрали + второстепенные; река -> мост --- */
+function layMainRun(p, horizontal){
+  for (let s=0; s<G; s++){
+    const i0 = horizontal ? idx(s,p)   : idx(p,s);
+    const i1 = horizontal ? idx(s,p+1) : idx(p+1,s);
+    const put = i => {
+      zone[i]=0;
+      if (grid[i]===T.MAIN || grid[i]===T.BRIDGE) return;
+      grid[i]   = (grid[i]===T.RIVER) ? T.BRIDGE : T.MAIN;
+      orient[i] = horizontal ? 2 : 1;
+    };
+    put(i0); put(i1);
+  }
+}
+function layMinor(p, horizontal){
+  for (let s=0; s<G; s++){
+    const i = horizontal ? idx(s,p) : idx(p,s);
+    const g = grid[i];
+    if (g===T.MAIN || g===T.BRIDGE){ zone[i]=0; continue; }
+    zone[i]=0;
+    if (g===T.RIVER){ grid[i]=T.BRIDGE; orient[i]=horizontal?2:1; }
+    else            { grid[i]=T.ROAD;   orient[i]=horizontal?2:1; }
+  }
+}
+function spread(k, avoid){
+  const res=[]; let guard=0;
+  while (res.length < k && guard++ < 500){
+    const p = 3 + rnd(G-6);
+    if (avoid.some(a => Math.abs(p-a) < 2)) continue;
+    if (res.some(q => Math.abs(p-q) < 4)) continue;
+    res.push(p);
+  }
+  return res;
+}
+function makeRoads(){
+  MRY = 6 + rnd(G-12); MRX = 6 + rnd(G-12);
+  BCX = MRX; BCY = MRY;
+  layMainRun(MRY, true);
+  layMainRun(MRX, false);
+  SEC_R = spread(4, [MRY, MRY+1]);
+  SEC_C = spread(4, [MRX, MRX+1]);
+  for (const ry of SEC_R) layMinor(ry, true);
+  for (const cx of SEC_C) layMinor(cx, false);
+}
+
+/* --- Кварталы: кластерная генерация методом «выращивания пятен» --- */
+function nearRoad(i){
+  const x=i%G, y=(i/G)|0;
+  for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++){
+    const nx=x+dx, ny=y+dy;
+    if (nx<0 || ny<0 || nx>=G || ny>=G) continue;
+    const t = grid[ny*G+nx];
+    if (t===T.ROAD || t===T.MAIN || t===T.BRIDGE) return true;
+  }
+  return false;
+}
+// blob() — алгоритм выращивания кластера (диффузионный рост из зерна),
+// используется для органичной застройки (жильё, промзона, часть парков и торговых рядов).
+function blob(cx, cy, r, type){
+  const c0 = idx(cx,cy);
+  if (!zone[c0] || grid[c0]!==T.EMPTY) return;
+  grid[c0]=type; zone[c0]=0;
+  const cells=[[cx,cy]];
+  let steps = r*r*4;
+  while (steps-- > 0 && cells.length < r*7){
+    const [x,y] = cells[rnd(cells.length)];
+    const nx = x + rnd(3) - 1, ny = y + rnd(3) - 1;
+    if (nx<0 || ny<0 || nx>=G || ny>=G) continue;
+    const j = idx(nx,ny);
+    if (zone[j] && grid[j]===T.EMPTY){ grid[j]=type; zone[j]=0; cells.push([nx,ny]); }
+  }
+}
+// Правильная прямоугольная застройка — используется для парков/дворов, чтобы город
+// выглядел спланированным, а не полностью хаотичным. Ставит квартал только если ВСЕ
+// клетки прямоугольника свободны (иначе не портит уже существующую застройку).
+function blobRect(cx, cy, w, h, type){
+  const x0 = cx - (w/2|0), y0 = cy - (h/2|0);
+  for (let y=y0; y<y0+h; y++) for (let x=x0; x<x0+w; x++){
+    if (x<0||y<0||x>=G||y>=G) return false;
+    const i = idx(x,y);
+    if (!zone[i] || grid[i]!==T.EMPTY) return false;
+  }
+  for (let y=y0; y<y0+h; y++) for (let x=x0; x<x0+w; x++){
+    const i = idx(x,y); grid[i]=type; zone[i]=0;
+  }
+  return true;
+}
+// Правильная круглая застройка — второй вариант «регулярной» формы для парков.
+function blobCircle(cx, cy, r, type){
+  const cells = [];
+  for (let y=cy-r; y<=cy+r; y++) for (let x=cx-r; x<=cx+r; x++){
+    if (x<0||y<0||x>=G||y>=G) return false;
+    if (Math.hypot(x-cx,y-cy) > r+0.3) continue;
+    const i = idx(x,y);
+    if (!zone[i] || grid[i]!==T.EMPTY) return false;
+    cells.push(i);
+  }
+  if (cells.length < 4) return false;
+  cells.forEach(i => { grid[i]=type; zone[i]=0; });
+  return true;
+}
+// Парк «правильной» формы (прямоугольник чаще, круг реже), с приоритетом на клетки
+// у реки — в реальных городах парки и набережные тяготеют к воде.
+function placeRegularPark(){
+  const riverCells = [];
+  const randomCells = [];
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const i = idx(x,y);
+    if (!zone[i] || grid[i]!==T.EMPTY) continue;
+    if (!nearRoad(i)) continue;
+    let nearRiver = false;
+    for (let dy=-3; dy<=3 && !nearRiver; dy++) for (let dx=-3; dx<=3 && !nearRiver; dx++){
+      const nx=x+dx, ny=y+dy;
+      if (nx>=0&&ny>=0&&nx<G&&ny<G && grid[idx(nx,ny)]===T.RIVER) nearRiver = true;
+    }
+    (nearRiver ? riverCells : randomCells).push([x,y]);
+  }
+  const pool = riverCells.length && Math.random()<0.7 ? riverCells : (randomCells.length ? randomCells : riverCells);
+  if (!pool.length) return false;
+  for (let tries=0; tries<25; tries++){
+    const [x,y] = pick(pool);
+    const useRect = Math.random() < 0.65;
+    const ok = useRect
+      ? blobRect(x, y, 3+rnd(3), 2+rnd(3), T.PARK)
+      : blobCircle(x, y, 2+rnd(2), T.PARK);
+    if (ok) return true;
+  }
+  return false;
+}
+function carveDistricts(){
+  // 1) Деловой центр — крупное цельное пятно вокруг перекрёстка магистралей
+  const r = 4 + rnd(2);
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const i = idx(x,y);
+    if (!zone[i]) continue;
+    if (Math.hypot(x-(MRX+0.5), y-(MRY+0.5)) <= r && Math.random() < 0.95){
+      grid[i]=T.BIZ; zone[i]=0;
+    }
+  }
+  // 2) Торговые кластеры на пересечениях второстепенных дорог — выращиваем пятна, а не единичные клетки
+  for (const ry of SEC_R) for (const cx of SEC_C){
+    const cand = [[cx-1,ry-1],[cx+1,ry-1],[cx-1,ry+1],[cx+1,ry+1]];
+    const k = 1 + rnd(2);
+    for (let n=0; n<k; n++){
+      const [x,y] = pick(cand);
+      if (x<0 || y<0 || x>=G || y>=G) continue;
+      if (grid[idx(x,y)]===T.RIVER) continue;
+      blob(x, y, 1+rnd(2), T.SHOP);
+    }
+  }
+  // 3) Торговые кластеры вдоль главных дорог (у пересечений с второстепенными)
+  for (const cx of SEC_C){
+    for (const ry of [MRY-1, MRY+2]){
+      const [x,y] = pick([[cx-1,ry],[cx+2,ry]]);
+      if (x>=0 && x<G && y>=0 && y<G && Math.random()<0.85){ blob(x, y, 1+rnd(2), T.SHOP); }
+    }
+  }
+  for (const ry of SEC_R){
+    for (const cx of [MRX-1, MRX+2]){
+      const [x,y] = pick([[cx,ry-1],[cx,ry+2]]);
+      if (x>=0 && x<G && y>=0 && y<G && Math.random()<0.85){ blob(x, y, 1+rnd(2), T.SHOP); }
+    }
+  }
+  // 4) Промзоны — крупные цельные пятна у окраин, ОБЯЗАТЕЛЬНО с подъездом к дороге
+  // (иначе рабочим было бы не добраться, а метро — незачем туда вести).
+  for (let k=0; k<3; k++){
+    for (let tries=0; tries<120; tries++){
+      const x=rnd(G), y=rnd(G);
+      const i = idx(x,y);
+      const dEdge = Math.min(x,y,G-1-x,G-1-y);
+      if (zone[i] && dEdge<=6 && Math.hypot(x-MRX,y-MRY)>=8 && nearRoad(i)){ blob(x,y,3+rnd(2),T.IND); break; }
+    }
+  }
+  // 5) Спальные районы — крупные жилые кварталы вдоль дорог. Иногда получается «двор»:
+  // в центре — школа, а вокруг неё, кольцом, — жилые дома (а не просто хаотичное пятно).
+  const spots=[];
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const i = idx(x,y);
+    if (!zone[i] || grid[i]!==T.EMPTY) continue;
+    if (nearRoad(i) && Math.hypot(x-MRX,y-MRY) >= r+2) spots.push(i);
+  }
+  for (let k=0; k<7 && spots.length; k++){
+    const i = pick(spots);
+    const cx=i%G, cy=(i/G)|0;
+    if (Math.random() < 0.3 && grid[i]===T.EMPTY && zone[i]){
+      // «Двор»: школа в центре, жильё кольцом вокруг неё — не всегда, примерно раз в три квартала.
+      grid[i]=T.SCHOOL; zone[i]=0;
+      [[cx-2,cy],[cx+2,cy],[cx,cy-2],[cx,cy+2]].forEach(([rx,ry]) => {
+        if (rx>=0 && ry>=0 && rx<G && ry<G) blob(rx, ry, 2+rnd(2), T.RES);
+      });
+    } else {
+      blob(cx, cy, 3 + rnd(2), T.RES);
+    }
+  }
+  // 6) Парки — правильной формы (прямоугольник/круг), тяготеют к реке
+  for (let k=0; k<3; k++) placeRegularPark();
+  // 7) Школа — ещё один квартал в глубине спального района (помимо «дворовых»)
+  for (let tries=0; tries<100; tries++){
+    const x=rnd(G), y=rnd(G);
+    const i = idx(x,y);
+    if (zone[i] && grid[i]===T.EMPTY && nearRoad(i) && Math.hypot(x-MRX,y-MRY) >= r+2){
+      blob(x,y,2,T.SCHOOL); break;
+    }
+  }
+}
+
+/* --- Генерация нового кольца при расширении границ (только вне старого центра), тем же кластерным методом --- */
+function carveDistrictsRing(pad, oldG){
+  const inCenter = (x,y) => x>=pad && x<pad+oldG && y>=pad && y<pad+oldG;
+  // Промзона нового кольца — тоже обязательно с подъездом к дороге
+  for (let k=0; k<6; k++){
+    for (let tries=0; tries<120; tries++){
+      const x=rnd(G), y=rnd(G);
+      const i = idx(x,y);
+      if (inCenter(x,y)) continue;
+      const dEdge = Math.min(x,y,G-1-x,G-1-y);
+      if (zone[i] && grid[i]===T.EMPTY && dEdge<=6 && nearRoad(i)){ blob(x,y,3+rnd(2),T.IND); break; }
+    }
+  }
+  const spots=[];
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    if (inCenter(x,y)) continue;
+    const i = idx(x,y);
+    if (!zone[i] || grid[i]!==T.EMPTY) continue;
+    if (nearRoad(i)) spots.push(i);
+  }
+  const resCount = Math.max(4, Math.floor(pad/2));
+  for (let k=0; k<resCount && spots.length; k++){
+    const i = pick(spots);
+    const cx=i%G, cy=(i/G)|0;
+    if (Math.random() < 0.25 && grid[i]===T.EMPTY && zone[i]){
+      grid[i]=T.SCHOOL; zone[i]=0;
+      [[cx-2,cy],[cx+2,cy],[cx,cy-2],[cx,cy+2]].forEach(([rx,ry]) => {
+        if (rx>=0 && ry>=0 && rx<G && ry<G) blob(rx, ry, 2+rnd(2), T.RES);
+      });
+    } else {
+      blob(cx, cy, 3 + rnd(2), T.RES);
+    }
+  }
+  for (let k=0; k<6 && spots.length; k++){
+    const i = pick(spots);
+    if (grid[i]===T.EMPTY && Math.random()<0.5){ blob(i%G, (i/G)|0, 1+rnd(2), T.SHOP); }
+  }
+  // Парки нового кольца — тоже правильной формы, с приоритетом у реки
+  for (let k=0; k<3; k++) placeRegularPark();
+}
+
+/* --- Продолжение реки в новое кольцо при расширении --- */
+function extendRiverNew(oldG, pad){
+  if (riverHorizontal){
+    let yLeft=-1, yRight=-1;
+    for (let y=0; y<G; y++){ const t=grid[y*G+pad]; if (t===T.RIVER||t===T.BRIDGE) yLeft=y; }
+    for (let y=0; y<G; y++){ const t=grid[y*G+(pad+oldG-1)]; if (t===T.RIVER||t===T.BRIDGE) yRight=y; }
+    if (yLeft<0) yLeft = (G/2)|0;
+    if (yRight<0) yRight = (G/2)|0;
+    let y=yLeft;
+    for (let x=pad-1; x>=0; x--){ y=wanderBounded(y,G); const i=y*G+x; grid[i]=T.RIVER; zone[i]=0; }
+    y=yRight;
+    for (let x=pad+oldG; x<G; x++){ y=wanderBounded(y,G); const i=y*G+x; grid[i]=T.RIVER; zone[i]=0; }
+  } else {
+    let xTop=-1, xBot=-1;
+    for (let x=0; x<G; x++){ const t=grid[pad*G+x]; if (t===T.RIVER||t===T.BRIDGE) xTop=x; }
+    for (let x=0; x<G; x++){ const t=grid[(pad+oldG-1)*G+x]; if (t===T.RIVER||t===T.BRIDGE) xBot=x; }
+    if (xTop<0) xTop = (G/2)|0;
+    if (xBot<0) xBot = (G/2)|0;
+    let x=xTop;
+    for (let y=pad-1; y>=0; y--){ x=wanderBounded(x,G); const i=y*G+x; grid[i]=T.RIVER; zone[i]=0; }
+    x=xBot;
+    for (let y=pad+oldG; y<G; y++){ x=wanderBounded(x,G); const i=y*G+x; grid[i]=T.RIVER; zone[i]=0; }
+  }
+}
+
+/* --- Карта доступности: всё в радиусе 2 клеток от дорог --- */
+function bakeAccess(){
+  access = new Uint8Array(N);
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const t = grid[idx(x,y)];
+    if (t!==T.ROAD && t!==T.MAIN && t!==T.BRIDGE) continue;
+    for (let dy=-2; dy<=2; dy++) for (let dx=-2; dx<=2; dx++){
+      const nx=x+dx, ny=y+dy;
+      if (nx>=0 && ny>=0 && nx<G && ny<G) access[idx(nx,ny)]=1;
+    }
+  }
+}
+
+/* ================= РАСШИРЕНИЕ ГРАНИЦ ГОРОДА ================= */
+function expandGrid(newG){
+  const oldG = G, pad = (newG-oldG)/2;
+  const oldGrid=grid, oldZone=zone, oldOrient=orient;
+
+  grid = new Uint8Array(newG*newG);
+  zone = new Uint8Array(newG*newG).fill(1);
+  orient = new Uint8Array(newG*newG);
+
+  for (let y=0; y<oldG; y++) for (let x=0; x<oldG; x++){
+    const oi = y*oldG+x, ni = (y+pad)*newG + (x+pad);
+    grid[ni] = oldGrid[oi];
+    zone[ni] = oldZone[oi];
+    orient[ni] = oldOrient[oi];
+  }
+
+  G = newG; N = newG*newG;
+  animT = new Float64Array(N).fill(-1);
+  animFrom = new Uint8Array(N);
+
+  BCX += pad; BCY += pad; MRX += pad; MRY += pad;
+  SEC_R = SEC_R.map(v => v+pad);
+  SEC_C = SEC_C.map(v => v+pad);
+
+  extendRiverNew(oldG, pad);
+  layMainRun(MRY, true);
+  layMainRun(MRX, false);
+  for (const ry of SEC_R) layMinor(ry, true);
+  for (const cx of SEC_C) layMinor(cx, false);
+  carveDistrictsRing(pad, oldG);
+  bakeAccess();
+
+  // Станции, их выходы и пересадки (по id) — координаты сдвигаем на pad,
+  // связи между линиями/переходами и все параметры дизайна не зависят от
+  // координат и не ломаются при расширении карты.
+  stations.forEach(s => {
+    s.x += pad; s.y += pad;
+    s.exits.forEach(e => { e.x += pad; e.y += pad; });
+  });
+  refreshStationIdx();
+  invalidateCatchments();
+
+  cv.width = G*TS; cv.height = G*TS; fxCanvas.width = G*TS; fxCanvas.height = G*TS;
+  log("Город расширяет границы! Новый размер карты: " + G + "×" + G + ".");
+}
+
+/* ================= ЖИВОЙ ГОРОД ================= */
+function setTile(i, t){
+  if (grid[i]===t) return;
+  if (animT[i] < 0) activeAnimCount++;
+  animFrom[i]=grid[i];
+  animT[i]=performance.now();
+  grid[i]=t;
+}
+function countN(i, types){
+  const x=i%G, y=(i/G)|0; let c=0;
+  for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++){
+    if (!dx && !dy) continue;
+    const nx=x+dx, ny=y+dy;
+    if (nx<0 || ny<0 || nx>=G || ny>=G) continue;
+    if (types.indexOf(grid[ny*G+nx]) >= 0) c++;
+  }
+  return c;
+}
+function evolveCity(){
+  const era = clamp((year-1930)/70, 0, 1);
+  const attempts = freq*3 + Math.floor(freq*(G/20));   // масштабируем на размер карты
+  let builtRes=0, builtShop=0, builtInd=0, ofc=0, renovated=0;
+
+  for (let a=0; a<attempts; a++){
+    const i = rnd(N);
+    if (stationIdxSet.has(i) || exitIdxSet.has(i)) continue;
+    const t = grid[i];
+    if (t===T.OFC || LOCKED[t]) continue;
+    const x=i%G, y=(i/G)|0;
+    const dC = Math.hypot(x-BCX, y-BCY);
+
+    if (t===T.EMPTY){
+      if (access[i]){
+        if (dC>11 && Math.random()<0.03+0.12*era){ setTile(i,T.IND); builtInd++; continue; }
+        if (Math.random() < 0.08 + 0.045*freq){
+          if (dC<=9 && Math.random() < 0.22 + 0.5*era){ setTile(i,T.SHOP); builtShop++; }
+          else { setTile(i,T.RES); builtRes++; }
+        }
+      }
+    }
+    else if (t===T.RES){
+      if (dC<=7 && year>=1938){
+        const nearOfc = countN(i, [T.OFC, T.BIZ]) > 0;
+        if (Math.random() < 0.02 + (nearOfc ? 0.10 : 0) + 0.10*era){ setTile(i,T.OFC); ofc++; }
+      }
+    }
+    else if (t===T.IND){
+      if (dC<=13 && year>=1942 && Math.random() < 0.03 + 0.07*era){ setTile(i,T.RES); renovated++; }
+    }
+  }
+
+  if (Math.random() < 0.10 + 0.20*era){
+    for (let tries=0; tries<30; tries++){
+      const i=rnd(N), x=i%G, y=(i/G)|0;
+      if (stationIdxSet.has(i) || exitIdxSet.has(i)) continue;
+      if (Math.min(x,y,G-1-x,G-1-y)<=6 && grid[i]===T.EMPTY && access[i]){ setTile(i,T.IND); builtInd++; break; }
+    }
+  }
+
+  const parts=[];
+  if (builtRes)   parts.push("новые жилые дома: "+builtRes);
+  if (builtShop)  parts.push("торговые ряды: "+builtShop);
+  if (builtInd)   parts.push("промзона растёт на окраинах");
+  if (ofc)        parts.push("небоскрёбы у Делового Центра: +"+ofc);
+  if (renovated)  parts.push("промзона уступает жилью: "+renovated);
+  if (parts.length) log("Город живёт — " + parts.join(", ") + ".");
+
+  // Университет и аэропорт — редкие крупные кварталы, появляются один раз,
+  // когда город дорастает до нужного года.
+  if (!universitySpawned && year >= UNIV_MIN_YEAR){
+    for (let tries=0; tries<250; tries++){
+      const i = rnd(N), x=i%G, y=(i/G)|0;
+      if (stationIdxSet.has(i) || exitIdxSet.has(i)) continue;
+      if (grid[i]===T.EMPTY && access[i] && Math.hypot(x-BCX,y-BCY) >= 6){
+        blob(x, y, 4, T.UNIV);
+        universitySpawned = true;
+        log("В городе открылся университетский кампус — ожидается заметный студенческий пассажиропоток.");
+        break;
+      }
+    }
+  }
+  if (!airportSpawned && year >= AIRPORT_MIN_YEAR){
+    for (let tries=0; tries<250; tries++){
+      const x=rnd(G), y=rnd(G);
+      const dEdge = Math.min(x,y,G-1-x,G-1-y);
+      const i = idx(x,y);
+      if (stationIdxSet.has(i) || exitIdxSet.has(i)) continue;
+      if (dEdge<=6 && grid[i]===T.EMPTY){
+        blob(x, y, 6, T.AIRPORT);
+        airportSpawned = true;
+        log("Построен городской аэропорт — крупнейший источник пассажиропотока в городе!");
+        break;
+      }
+    }
+  }
+}
+
+/* ================= КОНСТРУКТОР СТАНЦИЙ: ДИЗАЙН, СТОИМОСТЬ, ЭКОНОМИКА ================= */
+function defaultDesign(){
+  return {
+    platform:"island", columns:"none", length:"standard", turnstile:"tripod",
+    restroom:false, shop:false, signage:false, wifi:false,
+    floor:"concrete", walls:"whitewash", lighting:"bulbs", columnStyle:"square",
+    stairsMaterial:"concrete", ramp:false,
+    escalatorCount:0, escalatorMaterial:"iron",
+    elevatorCount:0, elevatorDoorStyle:"sliding",
+  };
+}
+function optFind(opts, key){ return opts.find(o => o.key===key) || opts[0]; }
+// Полная стоимость постройки станции с учётом всех выбранных параметров
+function stationTotalCost(d){
+  let c = STATION_COST;
+  c += optFind(PLATFORM_OPTS, d.platform).cost;
+  c += optFind(COLUMNS_OPTS, d.columns).cost;
+  c += optFind(LENGTH_OPTS, d.length).cost;
+  c += optFind(TURNSTILE_OPTS, d.turnstile).cost;
+  c += optFind(FLOOR_OPTS, d.floor).cost;
+  c += optFind(WALLS_OPTS, d.walls).cost;
+  c += optFind(LIGHT_OPTS, d.lighting).cost;
+  if (d.columns !== "none") c += optFind(COLSTYLE_OPTS, d.columnStyle).cost;
+  if (d.restroom) c += RESTROOM_COST;
+  if (d.shop) c += SHOP_COST;
+  if (d.signage) c += SIGNAGE_COST;
+  if (d.wifi) c += WIFI_COST;
+  c += optFind(STAIRS_MATERIAL_OPTS, d.stairsMaterial).cost;
+  if (d.ramp) c += RAMP_COST;
+  c += (d.escalatorCount||0) * optFind(ESCALATOR_MATERIAL_OPTS, d.escalatorMaterial).cost;
+  c += (d.elevatorCount||0) * optFind(ELEVATOR_DOOR_OPTS, d.elevatorDoorStyle).cost;
+  return c;
+}
+// Ежемесячное содержание станции: базовое + доп. модули + обслуживание отделки и спусков
+function stationMonthlyUpkeep(d){
+  let u = STATION_UPKEEP;
+  u += optFind(PLATFORM_OPTS, d.platform).upkeep || 0;
+  u += optFind(TURNSTILE_OPTS, d.turnstile).upkeep || 0;
+  if (d.restroom) u += RESTROOM_UPKEEP;
+  if (d.shop) u += SHOP_UPKEEP;
+  if (d.signage) u += SIGNAGE_UPKEEP;
+  if (d.wifi) u += WIFI_UPKEEP;
+  if (d.ramp) u += RAMP_UPKEEP;
+  u += (d.escalatorCount||0) * (optFind(ESCALATOR_MATERIAL_OPTS, d.escalatorMaterial).upkeep||0);
+  u += (d.elevatorCount||0) * ELEVATOR_UPKEEP_PER_UNIT;
+  u += Math.round(comfortScore(d) * 120); // дорогая отделка требует ухода
+  return u;
+}
+// Множитель пропускной способности от планировки и спусков (не зависит от отделки)
+function stationCapacityMul(d){
+  let m = 1;
+  m *= optFind(PLATFORM_OPTS, d.platform).mul;
+  m *= optFind(COLUMNS_OPTS, d.columns).mul;
+  m *= optFind(LENGTH_OPTS, d.length).mul;
+  m *= optFind(TURNSTILE_OPTS, d.turnstile).mul;
+  if (d.signage) m *= SIGNAGE_MUL;
+  m *= 1 + Math.min(d.escalatorCount||0, ESCALATOR_MAX) * 0.035;
+  m *= 1 + Math.min(d.elevatorCount||0, ELEVATOR_MAX) * 0.05;
+  if (d.ramp) m *= 1 + RAMP_CAP_BONUS;
+  return m;
+}
+// Индекс комфорта 0..1 — усреднённый уровень отделки + санузлы + Wi-Fi
+function comfortScore(d){
+  const floorL = FLOOR_OPTS.findIndex(o=>o.key===d.floor) / (FLOOR_OPTS.length-1);
+  const wallL  = WALLS_OPTS.findIndex(o=>o.key===d.walls) / (WALLS_OPTS.length-1);
+  const lightL = LIGHT_OPTS.findIndex(o=>o.key===d.lighting) / (LIGHT_OPTS.length-1);
+  const colL   = d.columns==="none" ? 0 : COLSTYLE_OPTS.findIndex(o=>o.key===d.columnStyle) / (COLSTYLE_OPTS.length-1);
+  const rest   = d.restroom ? 1 : 0;
+  const wifi   = d.wifi ? 1 : 0;
+  return (floorL + wallL + lightL + colL + rest + wifi) / 6;
+}
+// Черновик дизайна станции — все изменения на вкладках «Планировка/Спуск/Дизайн»
+// сначала попадают сюда («примерка»), и только по кнопке «Сохранить дизайн» реально
+// применяются и списывают деньги. pendingDesign выставляется при открытии редактора.
+let pendingDesign = null;
+function updatePendingDesign(key, value){
+  pendingDesign[key] = value;
+  refreshStationEditor();
+}
+function isDesignDirty(s){
+  return JSON.stringify(pendingDesign) !== JSON.stringify(s.design);
+}
+// Применяет черновик: списывает только разницу в стоимости относительно уже
+// оплаченного дизайна, при нехватке средств — отменяет, деньги не трогает.
+function commitPendingDesign(s){
+  const oldCost = stationTotalCost(s.design);
+  const newCost = stationTotalCost(pendingDesign);
+  const delta = newCost - oldCost;
+  if (delta > 0 && money < delta){
+    log("Недостаточно средств, чтобы сохранить изменения (нужно ещё " + money$(delta) + ").");
+    return false;
+  }
+  if (delta > 0) money -= delta;
+  s.design = JSON.parse(JSON.stringify(pendingDesign));
+  invalidateCatchments();
+  updateHUD();
+  log("Дизайн станции «" + s.name + "» сохранён" + (delta>0 ? " (списано " + money$(delta) + ")" : "") + " — новый пассажиропоток вступит в силу со следующего месяца.");
+  return true;
+}
+function cancelPendingDesign(s){
+  pendingDesign = JSON.parse(JSON.stringify(s.design));
+  refreshStationEditor();
+}
+
+/* ================= СТАНЦИИ ================= */
+function refreshStationIdx(){
+  stationIdxSet = new Set(stations.map(s => s.y*G + s.x));
+  exitIdxSet = new Set();
+  stations.forEach(s => s.exits.forEach(e => exitIdxSet.add(e.y*G + e.x)));
+}
+function stationAt(x,y){
+  return stations.find(s => s.x===x && s.y===y) || null;
+}
+// Базовый месячный пассажиропоток от типа квартала и его точных координат.
+// ВАЖНО: используется детерминированный хэш вместо Math.random() — раньше эта
+// функция пересчитывалась заново при каждом чтении (например, при открытии
+// редактора станции), и из-за случайности число «плавало» без всякой связи
+// с реальными действиями игрока (баг: поток менялся просто от переключения
+// киоска). Теперь для конкретной клетки карты число всегда одно и то же.
+function tileFlowBase(t, x, y){
+  const h = hsh(x*131+7, y*131+7);
+  const frac = pr(h, 5); // детерминированная псевдослучайная доля 0..1
+  switch (t){
+    case T.AIRPORT: return 2600 + frac*1600; // крупнейший транспортный хаб города
+    case T.UNIV:    return 950 + frac*550;
+    case T.OFC:     return 1150 + frac*650;
+    case T.BIZ:     return 900 + frac*500;
+    case T.SHOP:    return 650 + frac*400;
+    case T.SCHOOL:  return 500 + frac*350;
+    case T.RES:     return 320 + frac*280;
+    case T.IND:     return 480 + frac*320; // рабочие ездят на метро — промзона теперь даёт заметный поток
+    case T.PARK:    return 130 + frac*160; // рекреационный, неравномерный поток
+    default:        return 60 + frac*90;
+  }
+}
+// Типы кварталов, которые реально «поставляют» пассажиров станции (жильё, парки,
+// промзона, учебные и деловые кварталы) — пустыри и дороги дают мало и не участвуют
+// в расширенном сборе с соседних клеток.
+const CATCHMENT_SOURCE_TYPES = [T.RES, T.PARK, T.SHOP, T.BIZ, T.OFC, T.SCHOOL, T.UNIV, T.AIRPORT, T.IND];
+const CATCHMENT_RADIUS = 5; // насколько далеко «дотягивается» станция до соседних кварталов
+
+// Сезонная поправка спроса по месяцам (0 = январь): летом часть пассажиров уходит
+// в отпуска и меньше ездит на работу, осенью — традиционный всплеск (начало учебного
+// и делового года), зимние праздники слегка снижают поток.
+const SEASON_MUL = [0.92, 0.97, 1.02, 1.04, 1.00, 0.95, 0.85, 0.85, 1.10, 1.06, 1.02, 0.93];
+function seasonLabel(m){
+  if (SEASON_MUL[m] <= 0.86) return "летнее затишье (отпуска)";
+  if (SEASON_MUL[m] >= 1.08) return "осенний всплеск спроса";
+  return null;
+}
+// Считает пассажиропоток СРАЗУ для всех станций одним проходом по карте
+// (Вороной-подобное распределение: каждая жилая/деловая/парковая клетка «привязывается»
+// к ближайшей станции или её выходу в пределах CATCHMENT_RADIUS и отдаёт ей часть потока,
+// убывающую с расстоянием). Именно так реализуется просьба «если рядом жилой массив или
+// парк, а ближайшая станция эта — пассажиропоток растёт»: станция получает пассажиров не
+// только со своей клетки, но и от всех окрестных кварталов, которым она ближе всего.
+function computeStationCatchments(){
+  const result = new Map();
+  stations.forEach(s => result.set(s.id, 0));
+  if (!stations.length) return result;
+
+  const collectors = [];
+  stations.forEach(s => {
+    collectors.push({ id:s.id, x:s.x, y:s.y });
+    s.exits.forEach(e => collectors.push({ id:s.id, x:e.x, y:e.y }));
+  });
+
+  for (let y=0; y<G; y++){
+    for (let x=0; x<G; x++){
+      const t = grid[idx(x,y)];
+      if (CATCHMENT_SOURCE_TYPES.indexOf(t) < 0) continue;
+      let bestId=null, bestDist=Infinity;
+      for (const col of collectors){
+        const d = Math.max(Math.abs(col.x-x), Math.abs(col.y-y));
+        if (d <= CATCHMENT_RADIUS && d < bestDist){ bestDist=d; bestId=col.id; }
+      }
+      if (bestId===null) continue;
+      const flow = tileFlowBase(t, x, y);
+      const contribution = bestDist===0 ? flow : flow * (0.30 / (bestDist+1));
+      result.set(bestId, (result.get(bestId)||0) + contribution);
+    }
+  }
+  return result;
+}
+// Стоимость/содержание/множитель одного «выхода», который теперь может сочетать
+// сразу несколько типов спусков (например, лестница + 2 эскалатора в одной точке).
+function exitConfigCost(cfg){
+  return (cfg.stairsCount||0)*EXIT_TYPE_OPTS.stairs.cost +
+         (cfg.escalatorCount||0)*EXIT_TYPE_OPTS.escalator.cost +
+         (cfg.elevatorCount||0)*EXIT_TYPE_OPTS.elevator.cost;
+}
+function exitConfigUpkeep(cfg){
+  return (cfg.stairsCount||0)*EXIT_TYPE_OPTS.stairs.upkeep +
+         (cfg.escalatorCount||0)*EXIT_TYPE_OPTS.escalator.upkeep +
+         (cfg.elevatorCount||0)*EXIT_TYPE_OPTS.elevator.upkeep;
+}
+// Средний множитель пропускной способности одного выхода по всем его спускам
+function exitConfigMul(cfg){
+  const items = [];
+  for (let i=0;i<(cfg.stairsCount||0);i++) items.push(EXIT_TYPE_OPTS.stairs.capMul);
+  for (let i=0;i<(cfg.escalatorCount||0);i++) items.push(EXIT_TYPE_OPTS.escalator.capMul);
+  for (let i=0;i<(cfg.elevatorCount||0);i++) items.push(EXIT_TYPE_OPTS.elevator.capMul);
+  if (!items.length) return 1;
+  return items.reduce((a,b)=>a+b,0) / items.length;
+}
+// Средний множитель пропускной способности от всех построенных выходов станции.
+// Считаем среднее качество, а не сумму — иначе выгоднее было бы просто наставить
+// побольше спусков вместо осмысленного выбора состава.
+function exitsCapacityMul(s){
+  if (!s.exits.length) return 1;
+  let sum = 0;
+  s.exits.forEach(e => { sum += exitConfigMul(e); });
+  return 1 + (sum/s.exits.length - 1) * 0.5;
+}
+// Итоговая оценка пассажиропотока для превью в редакторе (без учёта цены билета,
+// сезонности и пересадок — только сама локация, планировка станции и её спуски).
+// design передаётся отдельно, чтобы можно было «примерить» ещё не сохранённый дизайн.
+function estimateStationFlow(s, design){
+  const d = design || s.design;
+  const catchments = computeStationCatchments();
+  const base = catchments.get(s.id) || 0;
+  const capMul = stationCapacityMul(d) * exitsCapacityMul(s);
+  const comfMul = 1 + comfortScore(d) * 0.5;
+  return Math.round(base * capMul * comfMul);
+}
+// Доход от торговых киосков: гарантированная минимальная аренда + бонус,
+// который прибавляется сверх минимума по мере роста текущей активности станции
+// (чем больше пассажиров сейчас проходит через станцию, тем больше выручка киосков).
+function shopRevenueFor(passengers){
+  return SHOP_BASE_RENT + Math.round(passengers * SHOP_REVENUE_PER_PASSENGER);
+}
+function getStationLineIds(stationId){
+  return lines.filter(l => l.stationIds.includes(stationId)).map(l => l.id);
+}
+// Пересадочные пары: вручную созданные переходы + станции разных линий на соседних клетках
+function computeTransferPairs(){
+  const pairs = [];
+  const seen = new Set();
+  transfers.forEach(t => {
+    if (!stations.find(s=>s.id===t.a) || !stations.find(s=>s.id===t.b)) return;
+    const key = t.a+"-"+t.b;
+    if (seen.has(key)) return;
+    seen.add(key);
+    pairs.push([t.a, t.b]);
+  });
+  for (let i=0; i<stations.length; i++){
+    for (let j=i+1; j<stations.length; j++){
+      const a=stations[i], b=stations[j];
+      if (Math.max(Math.abs(a.x-b.x), Math.abs(a.y-b.y)) <= 1){
+        const la = getStationLineIds(a.id), lb = getStationLineIds(b.id);
+        if (la.length && lb.length && (la.length!==lb.length || la.some(id=>!lb.includes(id)))){
+          const key1=a.id+"-"+b.id, key2=b.id+"-"+a.id;
+          if (!seen.has(key1) && !seen.has(key2)){ seen.add(key1); pairs.push([a.id,b.id]); }
+        }
+      }
+    }
+  }
+  return pairs;
+}
+function isTransferStation(stationId){
+  return computeTransferPairs().some(([a,b]) => a===stationId || b===stationId);
+}
+
+/* ================= РЕДАКТОР СТАНЦИИ: ПРЕВЬЮ НА CANVAS ================= */
+function drawStationSide(c, w, h, d){
+  c.clearRect(0,0,w,h);
+  // потолок
+  c.fillStyle = "#20222a"; c.fillRect(0,0,w,h*0.18);
+  // стены
+  c.fillStyle = WALL_COLOR[d.walls]; c.fillRect(0,h*0.18,w,h*0.5);
+  if (d.walls === "starlight"){
+    // мерцающий звёздный узор поверх глубокого синего витража
+    for (let i=0; i<26; i++){
+      const sx = w * pr(hsh(i*13+1,3), (i%9)+1);
+      const sy = h*0.20 + (h*0.44) * pr(hsh(i*17+5,9), (i%7)+2);
+      const r = 0.5 + pr(hsh(i*23+2,4), (i%5)+1) * 1.1;
+      c.fillStyle = "rgba(255,255,255," + (0.35 + pr(hsh(i,6),(i%4)+1)*0.5).toFixed(2) + ")";
+      c.beginPath(); c.arc(sx, sy, r, 0, Math.PI*2); c.fill();
+    }
+    c.fillStyle = "rgba(140,170,255,.18)";
+    c.fillRect(0, h*0.18, w, h*0.5);
+  }
+  // пол
+  c.fillStyle = FLOOR_COLOR[d.floor]; c.fillRect(0,h*0.68,w,h*0.32);
+  // край платформы
+  c.fillStyle = "rgba(0,0,0,.18)"; c.fillRect(0,h*0.68,w,4);
+  c.fillStyle = "rgba(232,193,67,.55)"; c.fillRect(0,h*0.68,w,2);
+
+  // светильники на потолке
+  const lc = LIGHT_COLOR[d.lighting];
+  const lightCount = d.lighting==="chandelier" ? 3 : 6;
+  for (let i=0; i<lightCount; i++){
+    const lx = (w/(lightCount+1))*(i+1);
+    if (d.lighting==="chandelier"){
+      c.strokeStyle="rgba(255,255,255,.35)"; c.lineWidth=1;
+      c.beginPath(); c.moveTo(lx,h*0.18); c.lineTo(lx,h*0.30); c.stroke();
+      c.fillStyle=lc; c.beginPath(); c.arc(lx,h*0.33,7,0,Math.PI*2); c.fill();
+    } else if (d.lighting==="neon"){
+      c.fillStyle=lc; c.fillRect(lx-11,h*0.185,22,3);
+    } else if (d.lighting==="fluorescent"){
+      c.fillStyle=lc; c.fillRect(lx-9,h*0.19,18,2);
+    } else {
+      c.fillStyle=lc; c.beginPath(); c.arc(lx,h*0.21,3,0,Math.PI*2); c.fill();
+    }
+  }
+
+  // колонны
+  if (d.columns !== "none"){
+    const cc = COLSTYLE_COLOR[d.columnStyle];
+    const positions = d.columns==="center" ? [w*0.5] : [w*0.14, w*0.86];
+    positions.forEach(px => {
+      c.fillStyle = cc;
+      c.fillRect(px-5, h*0.20, 10, h*0.48);
+      c.fillStyle = "rgba(0,0,0,.20)"; c.fillRect(px-5, h*0.20, 10, 3);
+      if (d.columnStyle==="fluted" || d.columnStyle==="doric"){
+        c.fillStyle="rgba(0,0,0,.14)";
+        for (let k=-3; k<=3; k+=3) c.fillRect(px+k, h*0.20, 1, h*0.48);
+      }
+      if (d.columnStyle==="chrome"){
+        c.fillStyle="rgba(255,255,255,.5)"; c.fillRect(px-1, h*0.20, 1, h*0.48);
+      }
+    });
+  }
+
+  // пассажиры (силуэты) — количество символически растёт с уровнем комфорта
+  const peopleCount = 3 + Math.round(comfortScore(d)*2);
+  c.fillStyle = "#2a2f3a";
+  for (let i=0; i<peopleCount; i++){
+    const px = w*0.12 + i*((w*0.76)/Math.max(1,peopleCount-1));
+    const py = h*0.86;
+    c.beginPath(); c.arc(px, py-11, 3, 0, Math.PI*2); c.fill();
+    c.fillRect(px-2, py-8, 4, 10);
+  }
+
+  // санузел / киоск подписи у стены
+  c.font = "10px sans-serif"; c.textAlign="center"; c.textBaseline="middle";
+  if (d.restroom){ c.fillStyle="rgba(95,168,255,.9)"; c.fillText("🚻", w*0.06, h*0.42); }
+  if (d.shop){ c.fillStyle="rgba(232,193,67,.95)"; c.fillText("🏪", w*0.94, h*0.42); }
+
+  drawDescentIcons(c, w, h, d);
+}
+// Полоса со спусками у нижнего края обеих схем (вид сбоку и сверху): лестница (всегда
+// одна, цвет по материалу), пандус (тонкая диагональ у подножия лестницы — специально
+// не «утяжеляет» вид лестницы), эскалаторы (наклонные плашки, материал по цвету) и
+// лифты (шахты с указанием стиля дверей). Больше 3 штук одного типа — показываем «+N».
+function drawDescentIcons(c, w, h, d){
+  const y = h*0.965;
+  let x = w*0.03;
+
+  // Лестница — всегда одна, цвет зависит от материала
+  c.fillStyle = STAIRS_MATERIAL_COLOR[d.stairsMaterial] || "#9aa0a8";
+  for (let k=0; k<3; k++) c.fillRect(x+k*3.4, y-2-k*2, 3.4, 2+k*2);
+  // Пандус — короткая диагональ у подножия лестницы, специально скромная деталь
+  if (d.ramp){
+    c.strokeStyle = "rgba(95,168,255,.85)"; c.lineWidth = 1.3;
+    c.beginPath(); c.moveTo(x+10.2, y); c.lineTo(x+15.5, y-7); c.stroke();
+    x += 20;
+  } else {
+    x += 14;
+  }
+
+  // Эскалаторы
+  if (d.escalatorCount > 0){
+    const shown = Math.min(d.escalatorCount, 3);
+    const escColor = d.escalatorMaterial === "wood" ? "#8a5a2e" : "#7c8a99";
+    for (let i=0; i<shown; i++){
+      c.save(); c.translate(x+i*9, y-1); c.rotate(-Math.PI/4.2);
+      c.fillStyle = escColor; c.fillRect(-4,-1.5,8,3);
+      c.restore();
+    }
+    x += shown*9 + 3;
+    if (d.escalatorCount > 3){
+      c.fillStyle="#cfd3dc"; c.font="8px sans-serif"; c.textAlign="left"; c.textBaseline="alphabetic";
+      c.fillText("+" + (d.escalatorCount-3), x, y-2);
+      x += 14;
+    }
+  }
+
+  // Лифты — прямоугольная шахта, штрих посередине показывает стиль дверей
+  if (d.elevatorCount > 0){
+    const shown = Math.min(d.elevatorCount, 3);
+    for (let i=0; i<shown; i++){
+      const ex = x+i*9;
+      c.fillStyle = "#5c6470"; c.fillRect(ex, y-9, 7, 9);
+      c.strokeStyle = d.elevatorDoorStyle==="sliding" ? "rgba(255,255,255,.75)" : "rgba(232,193,67,.85)";
+      c.lineWidth = 1;
+      c.beginPath();
+      if (d.elevatorDoorStyle === "sliding"){ c.moveTo(ex+3.5,y-9); c.lineTo(ex+3.5,y); }
+      else { c.moveTo(ex,y-4.5); c.lineTo(ex+7,y-4.5); }
+      c.stroke();
+    }
+    x += shown*9 + 3;
+    if (d.elevatorCount > 3){
+      c.fillStyle="#cfd3dc"; c.font="8px sans-serif"; c.textAlign="left"; c.textBaseline="alphabetic";
+      c.fillText("+" + (d.elevatorCount-3), x, y-2);
+    }
+  }
+}
+// Возвращает список Y-полос платформы (в долях высоты 0..1), не пересекающихся с путями,
+// для каждого типа конфигурации — используется, чтобы колонны и турникеты никогда не
+// оказывались физически на рельсах.
+function getPlatformBands(platform){
+  if (platform === "shore")   return [[0.06,0.34], [0.66,0.94]];   // платформы по краям, путь в центре
+  if (platform === "twoLevel")return [[0.18,0.42], [0.58,0.82]];   // два яруса платформы
+  return [[0.28,0.72]];                                             // island: одна платформа в центре
+}
+function drawStationTop(c, w, h, d){
+  c.clearRect(0,0,w,h);
+  c.fillStyle = FLOOR_COLOR[d.floor]; c.fillRect(0,0,w,h);
+  const trackColor = "#3a3f47";
+  const bands = getPlatformBands(d.platform);
+
+  if (d.platform === "island"){
+    c.fillStyle = trackColor; c.fillRect(0,0,w,h*0.22); c.fillRect(0,h*0.78,w,h*0.22);
+  } else if (d.platform === "shore"){
+    c.fillStyle = trackColor; c.fillRect(0,h*0.42,w,h*0.16);
+  } else { // twoLevel
+    c.fillStyle = trackColor; c.fillRect(0,0,w,h*0.14); c.fillRect(0,h*0.86,w,h*0.14);
+    c.fillStyle = "rgba(0,0,0,.18)"; c.fillRect(0,h*0.47,w,h*0.06);
+    c.fillStyle="rgba(255,255,255,.5)"; c.font="8px sans-serif"; c.textAlign="left"; c.textBaseline="middle";
+    c.fillText("ярус 2", 4, h*0.5);
+  }
+
+  // рамка станции — её длина
+  const lenFrac = d.length==="short" ? 0.42 : (d.length==="long" ? 1.0 : 0.7);
+  c.strokeStyle = "rgba(0,0,0,.28)"; c.lineWidth = 2;
+  c.strokeRect(w*(1-lenFrac)/2, h*0.03, w*lenFrac, h*0.94);
+
+  // Турникеты — ставим у ближнего края первой платформенной полосы (то есть на
+  // подходе от лестницы/спуска к платформе), вид зависит от выбранного типа.
+  const turnY = h*bands[0][1] - h*0.02;
+  c.fillStyle = "#5c6470";
+  if (d.turnstile === "gates"){
+    // Двустворчатые дверцы — два широких прохода
+    c.fillRect(w*0.5-20, turnY, 14, h*0.06);
+    c.fillRect(w*0.5+6,  turnY, 14, h*0.06);
+    c.fillStyle = "rgba(232,193,67,.7)";
+    c.fillRect(w*0.5-20, turnY+h*0.028, 14, 1);
+    c.fillRect(w*0.5+6,  turnY+h*0.028, 14, 1);
+  } else if (d.turnstile === "rotary"){
+    // Вращающийся вертикальный турникет — один круглый узел со спицами
+    const cx=w*0.5, cy=turnY+h*0.03, r=h*0.045;
+    c.beginPath(); c.arc(cx,cy,r,0,Math.PI*2); c.fill();
+    c.strokeStyle="rgba(255,255,255,.55)"; c.lineWidth=1;
+    for (let a=0; a<3; a++){
+      const ang = a*(Math.PI/1.5);
+      c.beginPath(); c.moveTo(cx,cy); c.lineTo(cx+Math.cos(ang)*r, cy+Math.sin(ang)*r); c.stroke();
+    }
+  } else {
+    // Трёхспицевый (стандартный) — три отдельные узкие калитки
+    for (let i=0; i<3; i++) c.fillRect(w*0.5-16+i*16, turnY, 4, h*0.06);
+  }
+
+  // колонны (вид сверху — точки), строго внутри платформенных полос
+  if (d.columns !== "none"){
+    c.fillStyle = COLSTYLE_COLOR[d.columnStyle];
+    const xs = d.columns==="center" ? [w*0.5] : [w*0.26, w*0.74];
+    xs.forEach(px => {
+      bands.forEach(band => {
+        const y0 = h*band[0], y1 = h*band[1];
+        const n = bands.length > 1 ? 2 : 3;
+        for (let k=0; k<n; k++){
+          const t = n===1 ? 0.5 : k/(n-1);
+          const py = y0 + (y1-y0)*t;
+          c.beginPath(); c.arc(px, py, 3, 0, Math.PI*2); c.fill();
+        }
+      });
+    });
+  }
+
+  // санузел
+  if (d.restroom){
+    c.fillStyle="#5fa8ff"; c.fillRect(w*0.04,h*0.05,w*0.14,h*0.17);
+    c.fillStyle="#fff"; c.font="8px sans-serif"; c.textAlign="center"; c.textBaseline="middle";
+    c.fillText("WC", w*0.04+w*0.07, h*0.05+h*0.085);
+  }
+  // торговый киоск
+  if (d.shop){
+    c.fillStyle="#e8c143"; c.fillRect(w*0.82,h*0.05,w*0.14,h*0.17);
+    c.fillStyle="#111"; c.font="8px sans-serif"; c.textAlign="center"; c.textBaseline="middle";
+    c.fillText("shop", w*0.82+w*0.07, h*0.05+h*0.085);
+  }
+  // табло навигации
+  if (d.signage){
+    c.fillStyle="rgba(95,168,255,.8)"; c.fillRect(w*0.5-14, h*0.05, 28, h*0.09);
+    c.fillStyle="#fff"; c.font="8px sans-serif"; c.textAlign="center"; c.textBaseline="middle";
+    c.fillText("→ M", w*0.5, h*0.05+h*0.045);
+  }
+
+  drawDescentIcons(c, w, h, d);
+}
+
+/* ================= РЕДАКТОР СТАНЦИИ: ПОСТРОИТЕЛИ УПРАВЛЕНИЯ ================= */
+function makeSelectorRow(label, opts, getKey, setKey){
+  const wrap = document.createElement("div"); wrap.className = "smSelRow";
+  const lab = document.createElement("div"); lab.className = "smSelLabel"; lab.textContent = label;
+  const ctrl = document.createElement("div"); ctrl.className = "smSelCtrl";
+  const prev = document.createElement("button"); prev.className = "smArrow"; prev.textContent = "<";
+  const val = document.createElement("span"); val.className = "smSelVal";
+  const next = document.createElement("button"); next.className = "smArrow"; next.textContent = ">";
+  function idxOf(){ return opts.findIndex(o => o.key === getKey()); }
+  function render(){
+    const i = idxOf();
+    const o = opts[Math.max(0,i)];
+    val.textContent = o.label + (o.cost > 0 ? " (+" + money$(o.cost) + ")" : "");
+    prev.disabled = i <= 0;
+    next.disabled = i >= opts.length-1;
+  }
+  prev.addEventListener("click", () => { const i=idxOf(); if (i>0){ setKey(opts[i-1].key); } });
+  next.addEventListener("click", () => { const i=idxOf(); if (i<opts.length-1){ setKey(opts[i+1].key); } });
+  ctrl.appendChild(prev); ctrl.appendChild(val); ctrl.appendChild(next);
+  wrap.appendChild(lab); wrap.appendChild(ctrl);
+  render();
+  return wrap;
+}
+function makeToggleRow(label, current, cost, upkeep, onChange){
+  const wrap = document.createElement("div"); wrap.className = "smToggleRow";
+  const lab = document.createElement("span"); lab.className = "smToggleLabel";
+  lab.textContent = label + " (" + money$(cost) + " + " + money$(upkeep) + "/мес)";
+  const btn = document.createElement("button");
+  btn.className = "smToggleBtn" + (current ? " active" : "");
+  btn.textContent = current ? "Вкл" : "Выкл";
+  btn.addEventListener("click", () => onChange(!current));
+  wrap.appendChild(lab); wrap.appendChild(btn);
+  return wrap;
+}
+// Счётчик количества (для эскалаторов/лифтов) со стрелками < >. Параметр skip задаёт
+// значения, которые нужно перепрыгивать (например, эскалаторов не бывает ровно 1 —
+// либо ни одного, либо минимум два, для надёжности на случай поломки).
+function makeCounterRow(label, value, min, max, formatFn, onChange, skip){
+  const wrap = document.createElement("div"); wrap.className = "smSelRow";
+  const lab = document.createElement("div"); lab.className = "smSelLabel"; lab.textContent = label;
+  const ctrl = document.createElement("div"); ctrl.className = "smSelCtrl";
+  const prev = document.createElement("button"); prev.className = "smArrow"; prev.textContent = "<";
+  const val = document.createElement("span"); val.className = "smSelVal";
+  const next = document.createElement("button"); next.className = "smArrow"; next.textContent = ">";
+  function step(dir){
+    let nv = value + dir;
+    if (skip && skip.indexOf(nv) >= 0) nv += dir;
+    return nv;
+  }
+  function render(){
+    val.textContent = formatFn ? formatFn(value) : String(value);
+    prev.disabled = step(-1) < min;
+    next.disabled = step(1) > max;
+  }
+  prev.addEventListener("click", () => { const nv=step(-1); if (nv>=min) onChange(nv); });
+  next.addEventListener("click", () => { const nv=step(1); if (nv<=max) onChange(nv); });
+  ctrl.appendChild(prev); ctrl.appendChild(val); ctrl.appendChild(next);
+  wrap.appendChild(lab); wrap.appendChild(ctrl);
+  render();
+  return wrap;
+}
+function buildLayoutTab(s){
+  smTabLayout.innerHTML = "";
+  smTabLayout.appendChild(makeSelectorRow("Конфигурация платформы", PLATFORM_OPTS,
+    () => pendingDesign.platform, v => updatePendingDesign("platform", v)));
+  smTabLayout.appendChild(makeSelectorRow("Расположение колонн", COLUMNS_OPTS,
+    () => pendingDesign.columns, v => updatePendingDesign("columns", v)));
+  smTabLayout.appendChild(makeSelectorRow("Длина станции", LENGTH_OPTS,
+    () => pendingDesign.length, v => updatePendingDesign("length", v)));
+  smTabLayout.appendChild(makeSelectorRow("Тип турникетов", TURNSTILE_OPTS,
+    () => pendingDesign.turnstile, v => updatePendingDesign("turnstile", v)));
+  smTabLayout.appendChild(makeToggleRow("🚻 Санузлы", pendingDesign.restroom, RESTROOM_COST, RESTROOM_UPKEEP,
+    v => updatePendingDesign("restroom", v)));
+  smTabLayout.appendChild(makeToggleRow("🏪 Торговые киоски (аренда)", pendingDesign.shop, SHOP_COST, SHOP_UPKEEP,
+    v => updatePendingDesign("shop", v)));
+  smTabLayout.appendChild(makeToggleRow("📺 Навигация и табло", pendingDesign.signage, SIGNAGE_COST, SIGNAGE_UPKEEP,
+    v => updatePendingDesign("signage", v)));
+  if (year >= WIFI_MIN_YEAR){
+    smTabLayout.appendChild(makeToggleRow("📶 Wi-Fi на станции", pendingDesign.wifi, WIFI_COST, WIFI_UPKEEP,
+      v => updatePendingDesign("wifi", v)));
+  } else {
+    const wifiNote = document.createElement("div"); wifiNote.className = "smNote";
+    wifiNote.textContent = "📶 Wi-Fi станет доступен для установки, когда наступит " + WIFI_MIN_YEAR + " год (сейчас " + year + ").";
+    smTabLayout.appendChild(wifiNote);
+  }
+  const note = document.createElement("div"); note.className = "smNote";
+  note.textContent = "Длина, платформа, колонны и табло влияют на пропускную способность станции. Санузлы, киоски и Wi-Fi — на удобство, доход от аренды и индекс комфорта.";
+  smTabLayout.appendChild(note);
+}
+function buildDesignTab(s){
+  smTabDesign.innerHTML = "";
+  smTabDesign.appendChild(makeSelectorRow("Материал пола", FLOOR_OPTS,
+    () => pendingDesign.floor, v => updatePendingDesign("floor", v)));
+  smTabDesign.appendChild(makeSelectorRow("Отделка стен", WALLS_OPTS,
+    () => pendingDesign.walls, v => updatePendingDesign("walls", v)));
+  smTabDesign.appendChild(makeSelectorRow("Освещение", LIGHT_OPTS,
+    () => pendingDesign.lighting, v => updatePendingDesign("lighting", v)));
+  if (pendingDesign.columns !== "none"){
+    smTabDesign.appendChild(makeSelectorRow("Стиль колонн", COLSTYLE_OPTS,
+      () => pendingDesign.columnStyle, v => updatePendingDesign("columnStyle", v)));
+  } else {
+    const note = document.createElement("div"); note.className = "smNote";
+    note.textContent = "Стиль колонн станет доступен, если на вкладке «Планировка» выбрать колонны по центру или по краям.";
+    smTabDesign.appendChild(note);
+  }
+  const note2 = document.createElement("div"); note2.className = "smNote";
+  const cs = Math.round(comfortScore(pendingDesign)*100);
+  note2.textContent = "Индекс комфорта станции: " + cs + "%. На крупных узлах в центре города высокий комфорт даёт до +50% к пассажиропотоку; на мелких окраинных станциях дорогая отделка обычно не окупается.";
+  smTabDesign.appendChild(note2);
+}
+// Вкладка «Спуск»: лестница на станции есть всегда (ровно 1, без счётчика) — можно
+// выбрать материал и добавить пандус. Эскалаторы и лифты — по желанию, со своим
+// количеством и материалом/стилем дверей. Это про инфраструктуру самой станции,
+// отдельно от географических «выходов» на вкладке «Обзор».
+function buildDescentTab(s){
+  smTabDescent.innerHTML = "";
+  const intro = document.createElement("div"); intro.className = "smNote";
+  intro.textContent = "На станции всегда есть одна лестница. Эскалаторы и лифты добавляются по желанию.";
+  smTabDescent.appendChild(intro);
+
+  smTabDescent.appendChild(makeSelectorRow("Материал лестницы", STAIRS_MATERIAL_OPTS,
+    () => pendingDesign.stairsMaterial, v => updatePendingDesign("stairsMaterial", v)));
+  smTabDescent.appendChild(makeToggleRow("♿ Пандус у лестницы", pendingDesign.ramp, RAMP_COST, RAMP_UPKEEP,
+    v => updatePendingDesign("ramp", v)));
+
+  smTabDescent.appendChild(makeCounterRow("Эскалаторы (шт.)", pendingDesign.escalatorCount, 0, ESCALATOR_MAX,
+    v => v===0 ? "нет" : v + " шт.",
+    v => updatePendingDesign("escalatorCount", v), [1]));
+  if (pendingDesign.escalatorCount > 0){
+    smTabDescent.appendChild(makeSelectorRow("Материал эскалаторов", ESCALATOR_MATERIAL_OPTS,
+      () => pendingDesign.escalatorMaterial, v => updatePendingDesign("escalatorMaterial", v)));
+  } else {
+    const en = document.createElement("div"); en.className = "smNote";
+    en.textContent = "Эскалаторов не бывает ровно один — либо ни одного, либо минимум два (для надёжности).";
+    smTabDescent.appendChild(en);
+  }
+
+  smTabDescent.appendChild(makeCounterRow("Лифты (шт.)", pendingDesign.elevatorCount, 0, ELEVATOR_MAX,
+    v => v===0 ? "нет" : v + " шт.",
+    v => updatePendingDesign("elevatorCount", v)));
+  if (pendingDesign.elevatorCount > 0){
+    smTabDescent.appendChild(makeSelectorRow("Стиль дверей лифта", ELEVATOR_DOOR_OPTS,
+      () => pendingDesign.elevatorDoorStyle, v => updatePendingDesign("elevatorDoorStyle", v)));
+  }
+
+  const note = document.createElement("div"); note.className = "smNote";
+  note.textContent = "Эскалаторы и лифты немного увеличивают пропускную способность станции. Пандус — бюджетная альтернатива лифту с более скромным эффектом.";
+  smTabDescent.appendChild(note);
+}
+
+/* ================= МОДАЛЬНОЕ ОКНО СТАНЦИИ (РЕДАКТОР) ================= */
+function switchStationTab(tabKey){
+  smTabButtons.forEach(b => b.classList.toggle("active", b.dataset.tab===tabKey));
+  smTabOverview.classList.toggle("active", tabKey==="overview");
+  smTabLayout.classList.toggle("active", tabKey==="layout");
+  smTabDescent.classList.toggle("active", tabKey==="descent");
+  smTabDesign.classList.toggle("active", tabKey==="design");
+}
+function openStationModal(id){
+  const s = stations.find(st => st.id===id);
+  if (!s) return;
+  selectedStationId = id;
+  pendingDesign = JSON.parse(JSON.stringify(s.design));
+  switchStationTab("overview");
+  smExitTypeRow.style.display = "none";
+  smExitAddBtn.style.display = "none";
+  stationModal.style.display = "flex";
+  refreshStationEditor();
+}
+function closeStationModal(){
+  stationModal.style.display = "none";
+  smExitTypeRow.style.display = "none";
+  smExitAddBtn.style.display = "none";
+  selectedStationId = null;
+  pendingDesign = null;
+}
+function updateStationModalInfo(s){
+  const lnNames = getStationLineIds(s.id).map(lid => (lines.find(l=>l.id===lid)||{}).name).filter(Boolean);
+  const status = s.conserved ? "законсервирована 🚧 (закрыта для пассажиров)" : (isTransferStation(s.id) ? "пересадочный узел ✓" : "обычная станция");
+  const totals = { stairsCount:0, escalatorCount:0, elevatorCount:0 };
+  s.exits.forEach(e => {
+    totals.stairsCount += e.stairsCount||0;
+    totals.escalatorCount += e.escalatorCount||0;
+    totals.elevatorCount += e.elevatorCount||0;
+  });
+  const parts = [];
+  if (totals.stairsCount) parts.push(EXIT_TYPE_OPTS.stairs.icon + " × " + totals.stairsCount);
+  if (totals.escalatorCount) parts.push(EXIT_TYPE_OPTS.escalator.icon + " × " + totals.escalatorCount);
+  if (totals.elevatorCount) parts.push(EXIT_TYPE_OPTS.elevator.icon + " × " + totals.elevatorCount);
+  const exitsSummary = s.exits.length ? (s.exits.length + " точка(и): " + parts.join(", ")) : "—";
+  smInfo.innerHTML =
+    "<div>Доп. выходы: " + exitsSummary + "</div>" +
+    "<div>Линии: " + (lnNames.length ? lnNames.join(", ") : "—") + "</div>" +
+    "<div>Статус: " + status + "</div>" +
+    (s.conserved ? "<div>Содержание: минимальное, " + money$(CONSERVATION_UPKEEP) + "/мес, дохода нет</div>" : "");
+  smConserve.textContent = s.conserved ? "▶️ Возобновить работу станции" : "🚧 Законсервировать станцию";
+  smConserve.classList.toggle("active", !!s.conserved);
+  smAddExit.disabled = !!s.conserved;
+  smAddTransfer.disabled = !!s.conserved;
+}
+// Центральная функция: перерисовывает превью и все вкладки при любом изменении.
+// Стоимость/содержание/поток и обе canvas-схемы считаются от pendingDesign («примерка»),
+// а не от уже сохранённого s.design — поэтому изменения видно сразу, но деньги
+// списываются только по кнопке «Сохранить дизайн».
+function refreshStationEditor(){
+  const s = stations.find(st => st.id===selectedStationId);
+  if (!s || !pendingDesign) return;
+  smTitle.textContent = s.name;
+  smNameInput.value = s.name;
+  updateStationModalInfo(s);
+  buildLayoutTab(s);
+  buildDescentTab(s);
+  buildDesignTab(s);
+  const dirty = isDesignDirty(s);
+  const delta = stationTotalCost(pendingDesign) - stationTotalCost(s.design);
+  smCostV.textContent = money$(stationTotalCost(pendingDesign));
+  smUpkeepV.textContent = money$(stationMonthlyUpkeep(pendingDesign)) + "/мес";
+  smFlowV.textContent = "~" + estimateStationFlow(s, pendingDesign).toLocaleString("ru-RU") + "/мес";
+  smPendingDelta.textContent = dirty
+    ? (delta > 0 ? "Доплата при сохранении: " + money$(delta) : "Изменения дизайна ещё не сохранены")
+    : "";
+  smSaveDesign.disabled = !dirty;
+  smCancelDesign.disabled = !dirty;
+  drawStationSide(smSideCtx, smSideCanvas.width, smSideCanvas.height, pendingDesign);
+  drawStationTop(smTopCtx, smTopCanvas.width, smTopCanvas.height, pendingDesign);
+}
+
+/* ================= ВЫХОДЫ И ПЕРЕХОДЫ ================= */
+let pendingExitConfig = null; // {stairsCount, escalatorCount, elevatorCount} — состав следующего выхода
+function tryPlaceExit(gx, gy){
+  const s = stations.find(st => st.id===pendingStationId);
+  if (!s || !pendingExitConfig){ mode="none"; pendingStationId=null; pendingExitConfig=null; return; }
+  const i = idx(gx,gy);
+  const cfg = pendingExitConfig;
+  const cost = exitConfigCost(cfg);
+  if (grid[i]===T.RIVER){ log("Нельзя построить выход посреди реки."); return; }
+  if (stationIdxSet.has(i)){ log("На этой клетке уже стоит станция."); return; }
+  if (s.x===gx && s.y===gy){ log("Выход должен быть на соседней клетке, а не на самой станции."); return; }
+  if (s.exits.some(e => e.x===gx && e.y===gy)){ log("Здесь уже есть выход этой станции."); return; }
+  const dist = Math.max(Math.abs(gx-s.x), Math.abs(gy-s.y));
+  if (dist > EXIT_MAX_DIST){ log("Выход слишком далеко от станции (максимум " + EXIT_MAX_DIST + " клетки)."); return; }
+  if (money < cost){ log("Недостаточно средств для постройки выхода (" + money$(cost) + ")."); return; }
+  money -= cost;
+  s.exits.push({ x:gx, y:gy, stairsCount:cfg.stairsCount||0, escalatorCount:cfg.escalatorCount||0, elevatorCount:cfg.elevatorCount||0 });
+  refreshStationIdx();
+  invalidateCatchments();
+  updateHUD();
+  mode = "none"; pendingStationId = null; pendingExitConfig = null;
+  const parts = [];
+  if (cfg.stairsCount) parts.push(EXIT_TYPE_OPTS.stairs.label.toLowerCase() + " ×" + cfg.stairsCount);
+  if (cfg.escalatorCount) parts.push(EXIT_TYPE_OPTS.escalator.label.toLowerCase() + " ×" + cfg.escalatorCount);
+  if (cfg.elevatorCount) parts.push(EXIT_TYPE_OPTS.elevator.label.toLowerCase() + " ×" + cfg.elevatorCount);
+  log("У станции «" + s.name + "» построен новый выход (" + parts.join(", ") + ") — радиус сбора пассажиров увеличен.");
+  // Мягкая рекомендация: единственный эскалатор во всех выходах без единой лестницы — не лучшая идея.
+  const totalEscalators = s.exits.reduce((sum,e) => sum + (e.escalatorCount||0), 0);
+  const anyStairsInExits = s.exits.some(e => (e.stairsCount||0) > 0);
+  if (totalEscalators === 1 && !anyStairsInExits){
+    log("Совет: у станции пока только один эскалатор среди выходов без резервной лестницы — стоит добавить подстраховку на случай поломки.");
+  }
+}
+function tryCreateTransfer(gx, gy){
+  const a = stations.find(st => st.id===pendingStationId);
+  if (!a){ mode="none"; pendingStationId=null; return; }
+  const b = stationAt(gx, gy);
+  if (!b){ log("Здесь нет станции для создания перехода."); return; }
+  if (b.id === a.id){ log("Нельзя создать переход станции с самой собой."); return; }
+  const exists = transfers.some(t => (t.a===a.id && t.b===b.id) || (t.a===b.id && t.b===a.id));
+  if (exists){ log("Между «" + a.name + "» и «" + b.name + "» уже есть переход."); return; }
+  if (money < TRANSFER_COST){ log("Недостаточно средств для перехода ($2 000)."); return; }
+  money -= TRANSFER_COST;
+  transfers.push({a:a.id, b:b.id});
+  updateHUD();
+  mode = "none"; pendingStationId = null;
+  log("Создан пересадочный переход между «" + a.name + "» и «" + b.name + "» — пассажиропоток обеих линий вырастет.");
+}
+
+/* ================= ЛИНИИ МЕТРО ================= */
+function openAddLineForm(){
+  addLineForm.style.display = "flex";
+  newLineName.value = "Линия " + nextLineId;
+  newLineName.focus();
+  newLineName.select();
+}
+function closeAddLineForm(){
+  addLineForm.style.display = "none";
+}
+function confirmAddLine(){
+  const name = newLineName.value.trim();
+  if (!name) { newLineName.focus(); return; }
+  const ln = { id: nextLineId++, name: name, color: LINE_COLORS[(nextLineId-2) % LINE_COLORS.length], stationIds: [] };
+  lines.push(ln);
+  activeLineId = ln.id;
+  closeAddLineForm();
+  renderLinesPanel();
+  updateHUD();
+  log("Создана новая линия метро «" + ln.name + "».");
+}
+function renderLinesPanel(){
+  lineSelect.innerHTML = "";
+  if (!lines.length){
+    const o = document.createElement("option");
+    o.value = ""; o.textContent = "— нет линий —";
+    lineSelect.appendChild(o);
+    btnAttach.disabled = true;
+  } else {
+    lines.forEach(ln => {
+      const o = document.createElement("option");
+      o.value = ln.id; o.textContent = ln.name + " (" + ln.stationIds.length + " ст.)";
+      if (ln.id === activeLineId) o.selected = true;
+      lineSelect.appendChild(o);
+    });
+    btnAttach.disabled = false;
+  }
+
+  lineStationsBox.innerHTML = "";
+  const ln = lines.find(l => l.id === activeLineId);
+  if (!ln || !ln.stationIds.length){
+    const d = document.createElement("div");
+    d.className = "empty";
+    d.textContent = ln ? "В этой линии пока нет станций." : "Выберите или создайте линию.";
+    lineStationsBox.appendChild(d);
+    return;
+  }
+  ln.stationIds.forEach((sid, i) => {
+    const s = stations.find(st => st.id === sid);
+    if (!s) return;
+    const chip = document.createElement("div");
+    chip.className = "lineChip";
+    const dot = document.createElement("span"); dot.className = "dot"; dot.style.background = ln.color;
+    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = s.name;
+    nm.title = "Открыть редактор станции";
+    nm.onclick = () => openStationModal(s.id);
+    const up = document.createElement("button"); up.textContent = "▲";
+    up.disabled = i===0;
+    up.onclick = () => { [ln.stationIds[i-1], ln.stationIds[i]] = [ln.stationIds[i], ln.stationIds[i-1]]; renderLinesPanel(); };
+    const down = document.createElement("button"); down.textContent = "▼";
+    down.disabled = i===ln.stationIds.length-1;
+    down.onclick = () => { [ln.stationIds[i+1], ln.stationIds[i]] = [ln.stationIds[i], ln.stationIds[i+1]]; renderLinesPanel(); };
+    const rm = document.createElement("button"); rm.textContent = "✕";
+    rm.onclick = () => { ln.stationIds.splice(i,1); renderLinesPanel(); };
+    chip.appendChild(dot); chip.appendChild(nm); chip.appendChild(up); chip.appendChild(down); chip.appendChild(rm);
+    lineStationsBox.appendChild(chip);
+  });
+}
+
+/* ================= ВРЕМЯ И ЭКОНОМИКА ================= */
+function monthTick(){
+  month++;
+  if (month > 11){ month=0; year++; }
+
+  if (!expanded90 && (year-1930) >= 15 && G===60){
+    expandGrid(90); expanded90 = true;
+  } else if (!expanded120 && (year-1930) >= 30 && G===90){
+    expandGrid(120); expanded120 = true;
+  }
+
+  money -= UPKEEP;
+
+  // Особые исторические периоды: спрос резко падает вне зависимости от сезона —
+  // Вторая мировая война и мировой финансовый кризис 2008 года. В такие годы
+  // игроку выгоднее временно снизить цену билета, чтобы удержать пассажиров.
+  // На лёгкой сложности эти события не действуют вовсе.
+  const histMul = difficulty === "easy" ? 1.0 :
+    ((year>=1941 && year<=1945) ? 0.72 : ((year===2008 || year===2009) ? 0.80 : 1.0));
+  if (difficulty !== "easy" && month===0 && (year===1941 || year===2008)){
+    log(year===1941
+      ? "Началась война — пассажиропоток резко упал. Возможно, стоит временно снизить цену билета."
+      : "Начался мировой финансовый кризис — люди экономят на поездках. Подумайте о снижении цены билета.");
+  }
+
+  if (stations.length){
+    const boostSet = new Set();
+    computeTransferPairs().forEach(([a,b]) => { boostSet.add(a); boostSet.add(b); });
+
+    // Непрерывная (не ступенчатая) эластичность спроса по цене: чем выше цена
+    // относительно нейтральной ($5), тем сильнее падает поток, и наоборот.
+    const priceMul = clamp(1.45 - 0.09*ticketPrice, 0.55, 1.30);
+    // На лёгкой сложности спрос всегда на пике сезона (без спадов и колебаний).
+    const seasonMul = (difficulty === "easy" ? Math.max.apply(null, SEASON_MUL) : SEASON_MUL[month]) * histMul;
+    // Полный пересчёт «кто к какой станции ближе» — самая тяжёлая операция в игре
+    // (проход по всей карте). Чтобы не тормозить на больших городах, пересчитываем
+    // не каждый месяц, а раз в несколько месяцев (зависит от качества графики),
+    // либо сразу же, если что-то важное изменилось (построена станция/выход, город расширился).
+    monthsSinceCatchmentRecalc++;
+    const recalcInterval = CATCHMENT_INTERVAL[quality] || 3;
+    if (catchmentsDirty || !cachedCatchments || monthsSinceCatchmentRecalc >= recalcInterval){
+      cachedCatchments = computeStationCatchments();
+      catchmentsDirty = false;
+      monthsSinceCatchmentRecalc = 0;
+    }
+    const catchments = cachedCatchments;
+
+    let totalPassengers=0, totalTicketRevenue=0, totalShopRevenue=0, totalUpkeep=0;
+    let transferBoosted=false, shopActive=false, lossStations=0, conservedCount=0;
+
+    stations.forEach(s => {
+      if (s.conserved){
+        // Законсервированная станция закрыта для пассажиров: минимальные расходы, без дохода.
+        totalUpkeep += CONSERVATION_UPKEEP;
+        s.lastPassengers = 0;
+        conservedCount++;
+        return;
+      }
+      // базовый поток со своей клетки + окрестных кварталов × пропускная способность планировки
+      let p = Math.round((catchments.get(s.id) || 0) * stationCapacityMul(s.design) * exitsCapacityMul(s));
+      p = Math.round(p * seasonMul);
+      p = Math.round(p * priceMul);
+      if (boostSet.has(s.id)){ p = Math.round(p*TRANSFER_BOOST); transferBoosted = true; }
+      // комфорт (отделка) даёт множитель привлекательности до +50%
+      const comfMul = 1 + comfortScore(s.design) * 0.5;
+      p = Math.round(p * comfMul);
+      s.lastPassengers = p;
+      totalPassengers += p;
+
+      const ticketRevenue = p * ticketPrice;
+      let shopRevenue = 0;
+      if (s.design.shop){ shopRevenue = shopRevenueFor(p); totalShopRevenue += shopRevenue; shopActive = true; }
+      const exitsUpkeep = s.exits.reduce((sum,e) => sum + exitConfigUpkeep(e), 0);
+      const upkeep = stationMonthlyUpkeep(s.design) + exitsUpkeep;
+      totalUpkeep += upkeep;
+      totalTicketRevenue += ticketRevenue;
+
+      if ((ticketRevenue + shopRevenue) < upkeep) lossStations++;
+    });
+
+    money += totalTicketRevenue + totalShopRevenue - totalUpkeep;
+
+    let msg = "Метро перевезло " + totalPassengers.toLocaleString("ru-RU") + " пассажиров. Выручка билетов " + money$(totalTicketRevenue) +
+      (shopActive ? ", аренда киосков " + money$(totalShopRevenue) : "") + ", содержание станций " + money$(totalUpkeep) + ".";
+    if (priceMul <= 0.8) msg += " Высокая цена билета ощутимо отпугивает пассажиров.";
+    else if (priceMul >= 1.15) msg += " Низкая цена билета заметно привлекает пассажиров.";
+    const sLabel = difficulty === "easy" ? null : seasonLabel(month);
+    if (sLabel) msg += " В этом месяце — " + sLabel + ".";
+    if (histMul < 1) msg += " " + ((year>=1941&&year<=1945) ? "Военное время подавляет спрос." : "Экономический кризис снижает спрос.");
+    if (transferBoosted) msg += " Пересадочные узлы увеличивают поток (+25%).";
+    if (lossStations) msg += " Внимание: " + lossStations + " ст. работают в убыток — отделка/модули не окупаются потоком.";
+    if (conservedCount) msg += " Законсервировано станций: " + conservedCount + " (только минимальное содержание).";
+    log(msg);
+  } else {
+    // нет станций — только базовое содержание города
+  }
+
+  evolveCity();
+  if (money < 0) doBankrupt();
+  updateHUD();
+  // Редактор станции НЕ обновляется автоматически из monthTick: полная
+  // пересборка вкладок и поля имени каждые несколько секунд затирала
+  // несохранённый ввод игрока и могла «съедать» клики по кнопкам, если
+  // пересборка происходила между mousedown и click. Редактор обновляется
+  // только по явным действиям игрока (клик по опции, сохранение имени,
+  // смена цены билета) — см. соответствующие обработчики ниже.
+}
+function doBankrupt(){
+  running=false; bankrupt=true;
+  btnPause.textContent="▶ Пуск";
+  btnPause.disabled=true;
+  setOverlay("БАНКРОТСТВО!", "Казна пуста. Нажмите «Новая игра», чтобы начать заново.", true);
+  log("БАНКРОТСТВО! Строительство метро остановлено.");
+}
+
+/* ================= ОТРИСОВКА ГОРОДА ================= */
+function house(bx, by, s){
+  ctx.fillStyle="#cdb98f";
+  ctx.fillRect(bx, by, 8, 7);
+  ctx.fillStyle="#9c4a2c";
+  ctx.fillRect(bx-1, by-3, 10, 3);
+  ctx.fillStyle="#5b4a33";
+  ctx.fillRect(bx + (s>0 ? 5 : 1), by+3, 2, 4);
+}
+function drawTile(px, py, x, y, t, ts){
+  const i = y*G+x;
+  const c = C[t];
+  ctx.fillStyle = rgb(c);
+  ctx.fillRect(px, py, TS, TS);
+  if (quality === "low"){
+    // Низкое качество: только заливка и тонкая граница — без деталей, значительно быстрее
+    ctx.fillStyle="rgba(0,0,0,.10)";
+    ctx.fillRect(px+TS-1, py, 1, TS);
+    ctx.fillRect(px, py+TS-1, TS, 1);
+    return;
+  }
+  const h = hsh(x,y);
+
+  switch (t){
+  case T.EMPTY:
+    ctx.fillStyle="rgba(116,138,88,.28)";
+    ctx.fillRect(px+2+(pr(h,1)*10|0), py+2+(pr(h,2)*10|0), 2, 2);
+    ctx.fillRect(px+2+(pr(h,3)*10|0), py+2+(pr(h,4)*10|0), 2, 2);
+    break;
+  case T.RIVER:{
+    const ph = ts*0.0011 + x*0.9 + y*0.7;
+    const ox = Math.sin(ph)*3;
+    ctx.fillStyle="rgba(255,255,255,.22)";
+    ctx.fillRect(px+7+ox, py+3, 5, 2);
+    ctx.fillRect(px+3-ox, py+10, 4, 2);
+    ctx.fillStyle="rgba(0,20,60,.15)";
+    ctx.fillRect(px, py, TS, 2);
+    break;}
+  case T.MAIN:
+    if (orient[i]===1){
+      ctx.fillStyle="rgba(255,255,255,.10)";
+      ctx.fillRect(px,py,2,TS); ctx.fillRect(px+TS-2,py,2,TS);
+      ctx.fillStyle="#d8c258";
+      ctx.fillRect(px+6,py+1,2,5); ctx.fillRect(px+6,py+9,2,5);
+    } else {
+      ctx.fillStyle="rgba(255,255,255,.10)";
+      ctx.fillRect(px,py,TS,2); ctx.fillRect(px,py+TS-2,TS,2);
+      ctx.fillStyle="#d8c258";
+      ctx.fillRect(px+1,py+6,5,2); ctx.fillRect(px+9,py+6,5,2);
+    }
+    break;
+  case T.ROAD:
+    ctx.fillStyle="rgba(255,255,255,.35)";
+    if (orient[i]===1){ ctx.fillRect(px+6,py+2,2,4); ctx.fillRect(px+6,py+9,2,4); }
+    else              { ctx.fillRect(px+2,py+6,4,2); ctx.fillRect(px+9,py+6,4,2); }
+    break;
+  case T.BRIDGE:
+    if (orient[i]===1){
+      ctx.fillStyle="#55361c";
+      ctx.fillRect(px,py,2,TS); ctx.fillRect(px+TS-2,py,2,TS);
+      ctx.fillStyle="#6b4526";
+      for (let k=3; k<TS-3; k+=4) ctx.fillRect(px+2, py+k, TS-4, 2);
+    } else {
+      ctx.fillStyle="#55361c";
+      ctx.fillRect(px,py,TS,2); ctx.fillRect(px,py+TS-2,TS,2);
+      ctx.fillStyle="#6b4526";
+      for (let k=3; k<TS-3; k+=4) ctx.fillRect(px+k, py+2, 2, TS-4);
+    }
+    break;
+  case T.BIZ:
+    ctx.fillStyle="#7c2b22";
+    ctx.fillRect(px+3, py+3, 9, 9);
+    ctx.fillStyle="#4d1b16";
+    ctx.fillRect(px+3, py+3, 9, 2);
+    ctx.fillStyle="rgba(255,214,160,.85)";
+    for (let wy=0; wy<2; wy++) for (let wx=0; wx<2; wx++)
+      ctx.fillRect(px+5+wx*3, py+5+wy*3, 1, 1);
+    break;
+  case T.RES:
+    house(px+1, py+6, 1);
+    house(px+7, py+5, -1);
+    break;
+  case T.IND:
+    ctx.fillStyle="#4c525c";
+    ctx.fillRect(px+2, py+5, 9, 7);
+    ctx.fillStyle="#5d646f";
+    ctx.fillRect(px+2, py+3, 4, 2); ctx.fillRect(px+7, py+3, 4, 2);
+    ctx.fillStyle="#3a3f47";
+    ctx.fillRect(px+10, py+1, 2, 5);
+    break;
+  case T.SHOP:
+    for (let k=0; k<3; k++){
+      ctx.fillStyle = k%2 ? "#f6ecd6" : "#b64a34";
+      ctx.fillRect(px+k*5, py, 5, 4);
+    }
+    ctx.fillStyle="#8a6a1c";
+    ctx.fillRect(px, py+4, TS, 1);
+    ctx.fillStyle="#4a3a12";
+    ctx.fillRect(px+5, py+7, 5, 7);
+    break;
+  case T.OFC:
+    ctx.fillStyle="#48112a";
+    ctx.fillRect(px+4, py+1, 7, 12);
+    ctx.fillStyle="#f0d27c";
+    for (let wy=0; wy<3; wy++) for (let wx=0; wx<2; wx++)
+      ctx.fillRect(px+5+wx*3, py+3+wy*3, 1, 1);
+    break;
+  case T.PARK:
+    ctx.fillStyle="rgba(255,255,255,.10)";
+    ctx.fillRect(px+2, py+11, TS-4, 1); // дорожка
+    ctx.fillStyle="#3f7a38";
+    ctx.beginPath(); ctx.arc(px+5, py+6, 3.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+12, py+8, 2.8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle="#5b3a22";
+    ctx.fillRect(px+4.5, py+8, 1, 3); ctx.fillRect(px+11.5, py+10, 1, 2.5);
+    break;
+  case T.SCHOOL:
+    ctx.fillStyle="#8a5a2e";
+    ctx.fillRect(px+2, py+6, 12, 9);
+    ctx.fillStyle="#a5692f";
+    ctx.beginPath(); ctx.moveTo(px+1, py+6); ctx.lineTo(px+8, py+1); ctx.lineTo(px+15, py+6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="rgba(255,232,180,.9)";
+    ctx.fillRect(px+4, py+9, 2, 2); ctx.fillRect(px+8, py+9, 2, 2); ctx.fillRect(px+11, py+9, 2, 2);
+    ctx.fillStyle="#5c3a1a"; ctx.fillRect(px+7, py+12, 3, 3);
+    break;
+  case T.UNIV:
+    ctx.fillStyle="#3c2f66";
+    ctx.fillRect(px+2, py+4, 12, 11);
+    ctx.fillStyle="#e8e2d5";
+    for (let k=0; k<4; k++) ctx.fillRect(px+3+k*3, py+5, 1.4, 9); // колонны фасада
+    ctx.fillStyle="#5c4a9a";
+    ctx.fillRect(px+2, py+3, 12, 2);
+    ctx.fillStyle="#e8c143";
+    ctx.beginPath(); ctx.moveTo(px+8, py); ctx.lineTo(px+11, py+3); ctx.lineTo(px+5, py+3); ctx.closePath(); ctx.fill();
+    break;
+  case T.AIRPORT:
+    ctx.fillStyle="#cfd9e2";
+    ctx.fillRect(px, py+3, TS, 4);
+    ctx.fillStyle="rgba(255,255,255,.85)";
+    for (let k=0; k<TS; k+=5) ctx.fillRect(px+k, py+4.5, 2, 1); // взлётная полоса
+    ctx.fillStyle="#7c8a99";
+    ctx.fillRect(px+3, py+9, 11, 6);
+    ctx.fillStyle="#eef3f8";
+    ctx.fillRect(px+3, py+9, 11, 1.5);
+    ctx.fillStyle="#3a3f47";
+    ctx.beginPath();
+    ctx.moveTo(px+13, py+6); ctx.lineTo(px+16, py+4.5); ctx.lineTo(px+16, py+5.5); ctx.lineTo(px+14, py+7);
+    ctx.closePath(); ctx.fill(); // силуэт самолёта на подлёте
+    break;
+  }
+  ctx.fillStyle="rgba(0,0,0,.07)";
+  ctx.fillRect(px+TS-1, py, 1, TS);
+  ctx.fillRect(px, py+TS-1, TS, 1);
+}
+// Плавная кривая, ОБЯЗАТЕЛЬНО проходящая через каждую станцию по порядку:
+// сплайн Катмулла-Рома, переведённый в последовательность кубических кривых
+// Безье. Опорные точки — сами станции, поэтому кривая никогда их не «срезает».
+function drawSmoothPath(pts, color, width){
+  if (pts.length < 2) return;
+  ctx.strokeStyle = color; ctx.lineWidth = width;
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  if (pts.length === 2){
+    ctx.lineTo(pts[1].x, pts[1].y);
+  } else {
+    for (let i=0; i<pts.length-1; i++){
+      const p0 = pts[i-1] || pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i+1];
+      const p3 = pts[i+2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x)/6;
+      const cp1y = p1.y + (p2.y - p0.y)/6;
+      const cp2x = p2.x - (p3.x - p1.x)/6;
+      const cp2y = p2.y - (p3.y - p1.y)/6;
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
+  }
+  ctx.stroke();
+}
+function drawLines(){
+  lines.forEach((ln, li) => {
+    if (ln.stationIds.length < 2) return;
+    const off = ((li % 3) - 1) * 3;
+    const pts = ln.stationIds.map(sid => {
+      const s = stations.find(st => st.id === sid);
+      if (!s) return null;
+      return { x: s.x*TS + TS/2 + off, y: s.y*TS + TS/2 + off };
+    }).filter(Boolean);
+    drawSmoothPath(pts, ln.color, 3);
+  });
+}
+// Пересадочные узлы: толстый светлый «мостик» с пунктирным контуром между станциями
+function drawTransfers(){
+  const pairs = computeTransferPairs();
+  pairs.forEach(([aId,bId]) => {
+    const a = stations.find(s=>s.id===aId), b = stations.find(s=>s.id===bId);
+    if (!a || !b) return;
+    const ax=a.x*TS+TS/2, ay=a.y*TS+TS/2, bx=b.x*TS+TS/2, by=b.y*TS+TS/2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(232,230,223,.9)";
+    ctx.lineWidth = TS*0.55;
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    ctx.setLineDash([2,3]);
+    ctx.strokeStyle = "rgba(18,20,26,.85)";
+    ctx.lineWidth = TS*0.55;
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+}
+// Выходы из метро: тонкая пунктирная связь + маленький маркер с буквой «м»
+function drawExits(){
+  ctx.setLineDash([3,3]);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "rgba(95,168,255,.55)";
+  stations.forEach(s => {
+    s.exits.forEach(e => {
+      const sx=s.x*TS+TS/2, sy=s.y*TS+TS/2, ex=e.x*TS+TS/2, ey=e.y*TS+TS/2;
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
+    });
+  });
+  ctx.setLineDash([]);
+  stations.forEach(s => {
+    s.exits.forEach(e => {
+      const ex=e.x*TS+TS/2, ey=e.y*TS+TS/2;
+      ctx.beginPath();
+      ctx.arc(ex, ey, TS*0.28, 0, Math.PI*2);
+      ctx.fillStyle = "#101830"; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = "#5fa8ff"; ctx.stroke();
+      ctx.fillStyle = "#cfe4ff";
+      ctx.font = "bold " + (TS*0.34|0) + "px sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      // Выход теперь может сочетать несколько типов спусков — показываем символ
+      // самого «продвинутого» из них (лифт > эскалатор > лестница).
+      const glyph = (e.elevatorCount||0) > 0 ? "▢" : ((e.escalatorCount||0) > 0 ? "⬆" : "м");
+      ctx.fillText(glyph, ex, ey+0.5);
+    });
+  });
+}
+function drawStations(){
+  stations.forEach(s => {
+    const cx = s.x*TS + TS/2, cy = s.y*TS + TS/2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, TS*0.46, 0, Math.PI*2);
+    ctx.fillStyle = s.conserved ? "#2a2c33" : "#1a2740";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = s.conserved ? "#767c88" : (isTransferStation(s.id) ? "#e8e6df" : "#5fa8ff");
+    ctx.stroke();
+    ctx.fillStyle = s.conserved ? "#9aa0ac" : "#fff";
+    ctx.font = "bold " + (TS*0.62|0) + "px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(s.conserved ? "⏸" : "M", cx, cy+1);
+  });
+}
+function draw(ts){
+  const animOn = fxAnimEnabled && quality !== "low";
+  for (let y=0; y<G; y++) for (let x=0; x<G; x++){
+    const i = y*G+x, px=x*TS, py=y*TS;
+    drawTile(px, py, x, y, grid[i], ts);
+    const t0 = animT[i];
+    if (t0 >= 0){
+      if (!animOn){
+        // Анимации выключены (низкое качество или настройка) — завершаем мгновенно.
+        animT[i] = -1; activeAnimCount = Math.max(0, activeAnimCount-1);
+      } else {
+        const k = (ts - t0) / 600;
+        if (k >= 1){ animT[i] = -1; activeAnimCount = Math.max(0, activeAnimCount-1); }
+        else {
+          ctx.globalAlpha = 1 - k;
+          drawTile(px, py, x, y, animFrom[i], ts);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+  }
+  drawLines();
+  drawTransfers();
+  drawExits();
+  drawStations();
+}
+
+/* ================= ЦИКЛ ================= */
+function frame(ts){
+  const dt = Math.min(100, ts - last); last = ts;
+  if (running && !bankrupt){
+    elapsed += dt;
+    if (elapsed >= MONTH_MS){ elapsed -= MONTH_MS; monthTick(); }
+    barFill.style.width = (elapsed/MONTH_MS*100).toFixed(1) + "%";
+  } else {
+    barFill.style.width = "0%";
+  }
+  // Троттлинг: полную перерисовку карты делаем не каждый RAF-кадр, а с интервалом,
+  // зависящим от качества графики — это главный источник тормозов на слабых устройствах.
+  // Во время анимации смены застройки временно используем более частую перерисовку
+  // (если анимации вообще включены), чтобы переход выглядел плавно.
+  const interval = (activeAnimCount > 0 && fxAnimEnabled && quality!=="low") ? 33 : RENDER_THROTTLE[quality];
+  if (ts - lastDrawTs >= interval){
+    lastDrawTs = ts;
+    draw(ts);
+    drawFx(ts);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ================= УПРАВЛЕНИЕ ВРЕМЕНЕМ ================= */
+btnPause.addEventListener("click", () => {
+  if (bankrupt) return;
+  running = !running; elapsed = 0;
+  btnPause.textContent = running ? "❚❚ Пауза" : "▶ Пуск";
+  if (running){
+    overlay.style.display = "none";
+    log("Город живёт — время пошло.");
+  } else {
+    setOverlay("ПАУЗА", "Нажмите «Пуск», чтобы продолжить", true);
+  }
+});
+btnRestart.addEventListener("click", () => {
+  const startMoney = difficulty === "easy" ? 100000 : 50000;
+  year=1930; month=0; money=startMoney;
+  running=false; bankrupt=false; elapsed=0;
+  expanded90=false; expanded120=false;
+  universitySpawned=false; airportSpawned=false;
+  stations=[]; nextStationId=1; stationIdxSet=new Set(); exitIdxSet=new Set();
+  lines=[]; nextLineId=1; activeLineId=null;
+  transfers=[]; selectedStationId=null; pendingStationId=null;
+  mode="none"; btnStation.classList.remove("active"); btnAttach.classList.remove("active");
+  closeAddLineForm();
+  closeStationModal();
+  btnPause.disabled=false; btnPause.textContent="▶ Пуск";
+  overlay.style.display="none";
+  elLog.innerHTML="";
+  genCity();
+  invalidateCatchments();
+  renderLinesPanel();
+  updateHUD();
+  log("Новый город основан. Бюджет метро: " + money$(startMoney) + (difficulty==="easy" ? " (лёгкая сложность)." : "."));
+});
+elFreq.addEventListener("input", e => {
+  freq = +e.target.value;
+  elFreqV.textContent = freq;
+});
+elPrice.addEventListener("input", e => {
+  ticketPrice = +e.target.value;
+  elPriceV.textContent = "$" + ticketPrice;
+  if (selectedStationId) refreshStationEditor();
+});
+
+/* ================= УПРАВЛЕНИЕ СТАНЦИЯМИ И ЛИНИЯМИ ================= */
+btnStation.addEventListener("click", () => {
+  mode = (mode === "station") ? "none" : "station";
+  btnStation.classList.toggle("active", mode==="station");
+  btnAttach.classList.remove("active");
+});
+btnAttach.addEventListener("click", () => {
+  if (!activeLineId){ log("Сначала выберите или создайте линию, затем нажмите «Привязать станцию»."); return; }
+  mode = (mode === "attach") ? "none" : "attach";
+  btnAttach.classList.toggle("active", mode==="attach");
+  btnStation.classList.remove("active");
+});
+btnAddLine.addEventListener("click", () => {
+  if (addLineForm.style.display === "flex") closeAddLineForm();
+  else openAddLineForm();
+});
+btnConfirmLine.addEventListener("click", confirmAddLine);
+newLineName.addEventListener("keydown", e => {
+  if (e.key === "Enter"){ e.preventDefault(); confirmAddLine(); }
+  else if (e.key === "Escape"){ closeAddLineForm(); }
+});
+lineSelect.addEventListener("change", () => {
+  activeLineId = lineSelect.value ? +lineSelect.value : null;
+  renderLinesPanel();
+});
+
+/* ---- Модальное окно станции: вкладки, переименование, выходы, переходы ---- */
+smTabButtons.forEach(btn => {
+  btn.addEventListener("click", () => switchStationTab(btn.dataset.tab));
+});
+smClose.addEventListener("click", closeStationModal);
+stationModal.addEventListener("click", e => { if (e.target === stationModal) closeStationModal(); });
+smSaveName.addEventListener("click", () => {
+  const s = stations.find(st => st.id === selectedStationId);
+  if (!s) return;
+  const val = smNameInput.value.trim();
+  if (!val) { smNameInput.focus(); return; }
+  const old = s.name;
+  s.name = val;
+  smTitle.textContent = val;
+  renderLinesPanel();
+  if (old !== val) log("Станция «" + old + "» переименована в «" + val + "».");
+});
+smNameInput.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); smSaveName.click(); } });
+const EXIT_COUNT_MAX = 5;
+// Лестница по умолчанию 1 (обычно у выхода есть хотя бы лестница), эскалатор и лифт
+// по умолчанию 0 — их можно как добавить, так и полностью убрать.
+// Ключи полей (stairsCount/escalatorCount/elevatorCount) намеренно совпадают с теми,
+// что ожидают exitConfigCost()/exitConfigUpkeep()/tryPlaceExit() — раньше здесь были
+// короткие имена (stairs/escalator/elevator), из-за чего расчёт стоимости всегда
+// возвращал 0 и добавление выхода тихо не срабатывало.
+let exitPendingCounts = { stairsCount:1, escalatorCount:0, elevatorCount:0 };
+const EXIT_CARD_DEFS = [
+  { key:"stairs",    countField:"stairsCount",    min:0, max:1 },
+  { key:"escalator", countField:"escalatorCount", min:0, max:EXIT_COUNT_MAX },
+  { key:"elevator",  countField:"elevatorCount",  min:0, max:EXIT_COUNT_MAX },
+];
+function renderExitTypeCards(){
+  smExitTypeRow.innerHTML = "";
+  EXIT_CARD_DEFS.forEach(def => {
+    const etype = EXIT_TYPE_OPTS[def.key];
+    const count = exitPendingCounts[def.countField];
+    const card = document.createElement("div");
+    card.className = "smExitCard";
+
+    const info = document.createElement("div");
+    info.className = "smExitTypeBtn";
+    info.innerHTML = etype.icon + " " + etype.label + "<br><small>" + money$(etype.cost) + "/шт.</small>";
+
+    const countRow = document.createElement("div");
+    countRow.className = "smExitCountRow";
+    const minus = document.createElement("button");
+    minus.className = "smArrow"; minus.textContent = "−"; minus.disabled = count<=def.min;
+    minus.addEventListener("click", () => { exitPendingCounts[def.countField] = Math.max(def.min, count-1); renderExitTypeCards(); });
+    const val = document.createElement("span");
+    val.className = "smSelVal"; val.textContent = count;
+    const plus = document.createElement("button");
+    plus.className = "smArrow"; plus.textContent = "+"; plus.disabled = count>=def.max;
+    plus.addEventListener("click", () => { exitPendingCounts[def.countField] = Math.min(def.max, count+1); renderExitTypeCards(); });
+    countRow.appendChild(minus); countRow.appendChild(val); countRow.appendChild(plus);
+
+    card.appendChild(info); card.appendChild(countRow);
+    smExitTypeRow.appendChild(card);
+  });
+  const totalCost = exitConfigCost(exitPendingCounts);
+  const totalCount = exitPendingCounts.stairsCount + exitPendingCounts.escalatorCount + exitPendingCounts.elevatorCount;
+  smExitAddBtn.textContent = "➕ Добавить (" + money$(totalCost) + ")";
+  smExitAddBtn.disabled = totalCount === 0;
+}
+smAddExit.addEventListener("click", () => {
+  // Раскрываем настройку состава выхода вместо немедленной постройки — игрок задаёт
+  // количество лестниц/эскалаторов/лифтов, затем подтверждает кнопкой «Добавить».
+  const showing = smExitTypeRow.style.display === "flex";
+  if (showing){ smExitTypeRow.style.display = "none"; smExitAddBtn.style.display = "none"; }
+  else { renderExitTypeCards(); smExitTypeRow.style.display = "flex"; smExitAddBtn.style.display = "block"; }
+});
+smExitAddBtn.addEventListener("click", () => {
+  if (!selectedStationId) return;
+  const cfg = Object.assign({}, exitPendingCounts);
+  const cost = exitConfigCost(cfg);
+  if (cost <= 0) return;
+  if (money < cost){ log("Недостаточно средств для постройки выхода (" + money$(cost) + ")."); return; }
+  pendingExitConfig = cfg;
+  pendingStationId = selectedStationId;
+  mode = "exit";
+  smExitTypeRow.style.display = "none";
+  smExitAddBtn.style.display = "none";
+  closeStationModal();
+  log("Кликните по клетке рядом со станцией (в пределах " + EXIT_MAX_DIST + " клеток), чтобы разместить выход.");
+});
+smAddTransfer.addEventListener("click", () => {
+  if (!selectedStationId) return;
+  if (money < TRANSFER_COST){ log("Недостаточно средств для перехода ($2 000)."); return; }
+  pendingStationId = selectedStationId;
+  mode = "transfer";
+  closeStationModal();
+  log("Кликните по другой станции, чтобы создать пересадочный переход.");
+});
+smConserve.addEventListener("click", () => {
+  const s = stations.find(st => st.id === selectedStationId);
+  if (!s) return;
+  s.conserved = !s.conserved;
+  if (s.conserved){
+    log("Станция «" + s.name + "» законсервирована — закрыта для пассажиров, содержание снижено до " + money$(CONSERVATION_UPKEEP) + "/мес.");
+  } else {
+    log("Станция «" + s.name + "» возобновила работу.");
+  }
+  updateHUD();
+  refreshStationEditor();
+});
+smSaveDesign.addEventListener("click", () => {
+  const s = stations.find(st => st.id === selectedStationId);
+  if (!s || !pendingDesign) return;
+  if (!commitPendingDesign(s)) return;
+  refreshStationEditor();
+  // Дешёвая по коду индикация успеха: на секунду меняем подпись и подсвечиваем кнопку.
+  smSaveDesign.textContent = "✓ Сохранено";
+  smSaveDesign.classList.add("justSaved");
+  setTimeout(() => { smSaveDesign.textContent = "💾 Сохранить дизайн"; smSaveDesign.classList.remove("justSaved"); }, 1400);
+});
+smCancelDesign.addEventListener("click", () => {
+  const s = stations.find(st => st.id === selectedStationId);
+  if (!s) return;
+  cancelPendingDesign(s);
+});
+
+cv.addEventListener("click", (e) => {
+  const rect = cv.getBoundingClientRect();
+  const px = e.clientX - rect.left, py = e.clientY - rect.top;
+  const gx = Math.floor(px / TS), gy = Math.floor(py / TS);
+  if (gx<0 || gy<0 || gx>=G || gy>=G) return;
+  const i = idx(gx, gy);
+
+  if (mode === "station"){
+    if (grid[i] === T.RIVER){ log("Нельзя построить станцию посреди реки."); return; }
+    if (stationIdxSet.has(i)){ log("Здесь уже есть станция."); return; }
+    if (money < STATION_COST){ log("Недостаточно средств для постройки станции ($5 000)."); return; }
+    money -= STATION_COST;
+    const s = { id: nextStationId++, name: "Станция " + (nextStationId-1), x: gx, y: gy, lastPassengers: 0, exits: [], design: defaultDesign(), conserved: false };
+    stations.push(s);
+    refreshStationIdx();
+    invalidateCatchments();
+    updateHUD();
+    mode = "none"; btnStation.classList.remove("active");
+    log("Построена «" + s.name + "». Открываю редактор станции для настройки.");
+    openStationModal(s.id);
+  } else if (mode === "attach"){
+    const ln = lines.find(l => l.id === activeLineId);
+    if (!ln) return;
+    const s = stationAt(gx, gy);
+    if (!s){ log("Здесь нет станции — сначала постройте её."); return; }
+    if (ln.stationIds.includes(s.id)){ log("«" + s.name + "» уже в линии «" + ln.name + "»."); return; }
+    ln.stationIds.push(s.id);
+    renderLinesPanel();
+    log("«" + s.name + "» добавлена в линию «" + ln.name + "».");
+  } else if (mode === "exit"){
+    tryPlaceExit(gx, gy);
+  } else if (mode === "transfer"){
+    tryCreateTransfer(gx, gy);
+  } else {
+    const s = stationAt(gx, gy);
+    if (s) openStationModal(s.id);
+  }
+});
+
+/* ================= ТУТОРИАЛ ================= */
+const TUTORIAL_PAGES = [
+  {
+    title: "👋 Добро пожаловать в Metro Tycoon",
+    body: "<p>Вы — глава метростроя растущего города, начиная с <b>1930 года</b>. Город сам застраивается " +
+      "и меняется со временем, а ваша задача — построить сеть метро, которая перевозит пассажиров, приносит доход " +
+      "и не разоряет городскую казну.</p>" +
+      "<p>Этот туториал коротко пройдётся по каждому разделу игры. Листайте стрелками внизу или кликайте по точкам.</p>"
+  },
+  {
+    title: "⏱ Время и городская казна",
+    body: "<ul>" +
+      "<li><b>▶ Пуск / ❚❚ Пауза</b> — запускает и останавливает течение времени. 1 игровой месяц = 3 секунды.</li>" +
+      "<li>Слайдер <b>«Частота изменений города»</b> (1–5) регулирует, насколько активно город застраивается новыми домами, магазинами и промзонами каждый месяц.</li>" +
+      "<li>Казна вверху показывает деньги. Город тратит <b>$500 в месяц</b> на базовое содержание — плюс расходы на ваши станции.</li>" +
+      "<li>Если казна уйдёт в минус — наступит <b>банкротство</b>, и игру придётся начать заново кнопкой «↻ Новая игра».</li>" +
+      "</ul>"
+  },
+  {
+    title: "🚉 Постройка станций",
+    body: "<ul>" +
+      "<li>Нажмите <b>«🚉 Построить станцию ($5 000)»</b>, затем кликните по свободной клетке карты (кроме реки).</li>" +
+      "<li>Сразу после постройки откроется <b>редактор станции</b> — там можно сразу настроить её планировку и дизайн.</li>" +
+      "<li>Позже станцию всегда можно открыть заново: кликните по ней на карте или по её названию в списке линии слева.</li>" +
+      "<li>Все изменения в редакторе сначала «примеряются» бесплатно — деньги списываются только по кнопке <b>«💾 Сохранить дизайн»</b>. Кнопка <b>«↩ Отменить»</b> сбрасывает непримененные правки.</li>" +
+      "</ul>"
+  },
+  {
+    title: "🚇 Линии метро",
+    body: "<ul>" +
+      "<li>В правой панели нажмите <b>«+ Добавить линию»</b> и введите название — линия получит свой цвет.</li>" +
+      "<li>Нажмите <b>«📍 Привязать станцию»</b>, затем кликайте по станциям на карте — они добавятся в конец линии по порядку.</li>" +
+      "<li>Порядок станций в списке линии можно менять стрелками ▲▼ — именно по этому порядку прокладываются рельсы.</li>" +
+      "<li>Рельсы рисуются плавной кривой и всегда проходят <b>через все станции</b> линии по порядку, без резких изломов.</li>" +
+      "</ul>"
+  },
+  {
+    title: "💵 Цена билета и сезонный спрос",
+    body: "<ul>" +
+      "<li>Слайдер <b>«Цена билета»</b> ($1–$10) плавно влияет на пассажиропоток: чем выше цена — тем меньше людей едут, чем ниже — тем больше.</li>" +
+      "<li>Спрос также меняется по <b>сезонам</b>: летом (июль–август) поток падает — люди в отпусках, осенью (сентябрь) — заметный всплеск.</li>" +
+      "<li>Ежемесячный доход = пассажиры × цена билета, за вычетом содержания станций.</li>" +
+      "</ul>"
+  },
+  {
+    title: "🧭 Откуда берутся пассажиры",
+    body: "<p>Станция собирает пассажиров не только со своей клетки, но и со всех подходящих кварталов поблизости — " +
+      "жилых домов, парков, школ, офисов, — которым эта станция ближе всего среди всех построенных.</p>" +
+      "<ul>" +
+      "<li>Чем больше рядом жилья и зелени — тем выше поток, даже если сама станция стоит на пустыре.</li>" +
+      "<li>Красивая отделка и удобства увеличивают этот поток ещё сильнее (множитель комфорта).</li>" +
+      "<li>Выходы (см. предыдущую страницу) расширяют зону сбора ещё дальше от станции.</li>" +
+      "</ul>"
+  },
+  {
+    title: "🚶 Выходы из метро",
+    body: "<p>В редакторе станции (вкладка «Обзор») есть кнопка <b>«🚶 Добавить выход»</b>.</p>" +
+      "<ul>" +
+      "<li>Раскроются 3 карточки — лестница, эскалатор, лифт — под каждой счётчик количества (лестница 0–1, эскалатор и лифт 0–5).</li>" +
+      "<li>Задайте нужный состав и нажмите <b>«➕ Добавить»</b> — кнопка сразу показывает итоговую стоимость.</li>" +
+      "<li>Затем кликните по клетке в пределах 4 клеток от станции (не река, не другая станция) — там появится один выход, объединяющий все выбранные спуски.</li>" +
+      "<li>Каждый выход расширяет зону сбора пассажиров — станция получает дополнительный поток от квартала рядом с ним.</li>" +
+      "</ul>"
+  },
+  {
+    title: "🔀 Пересадочные узлы",
+    body: "<ul>" +
+      "<li>Если станции <b>разных линий</b> стоят на соседних клетках — переход образуется автоматически.</li>" +
+      "<li>Либо создайте его вручную кнопкой <b>«🔀 Создать переход ($2 000)»</b> в редакторе станции, затем кликните по другой станции.</li>" +
+      "<li>Пересадочный узел даёт <b>+25%</b> к пассажиропотоку обеих станций и рисуется на карте светлым «мостиком».</li>" +
+      "</ul>"
+  },
+  {
+    title: "🏗 Редактор станции — Планировка",
+    body: "<p>Вкладка «Планировка» в редакторе станции:</p>" +
+      "<ul>" +
+      "<li><b>Платформа</b>: Островная (база) / Береговая / Двухъярусная и т.д. — каждая увеличивает пропускную способность, но и стоимость с содержанием.</li>" +
+      "<li><b>Колонны</b>: без колонн / по центру / по краям.</li>" +
+      "<li><b>Длина станции</b>: короткая (2 вагона) / стандартная (4) / длинная (6 вагонов, самая высокая пропускная способность). Слишком короткая платформа при высоком потоке вызывает жалобы пассажиров — вплоть до заметок в газете!</li>" +
+      "<li><b>Тип турникетов</b>: трёхспицевый / двустворчатые дверцы / вращающийся вертикальный и т.д. — тоже влияет на пропускную способность.</li>" +
+      "<li><b>Санузлы, торговые киоски, навигация и табло, Wi-Fi</b> (доступен с 2010 года) — включаются кнопками, у каждого своя цена постройки и ежемесячное содержание.</li>" +
+      "<li>Если станция стала убыточной — откройте её и нажмите <b>«🚧 Законсервировать станцию»</b>: она закроется для пассажиров, но содержание упадёт до минимальных $50/мес вместо полной суммы.</li>" +
+      "</ul>"
+  },
+  {
+    title: "🪜 Редактор станции — Спуск",
+    body: "<p>Вкладка «Спуск» отвечает за собственную инфраструктуру самой станции (отдельно от географических «выходов» на вкладке «Обзор»):</p>" +
+      "<ul>" +
+      "<li><b>Лестница</b> — на станции есть всегда, ровно одна. Можно выбрать материал (бетон / металл / камень и т.д.) и включить <b>пандус</b> — он дешевле лифта, но даёт более скромный эффект.</li>" +
+      "<li><b>Эскалаторы</b> — от 0 до 6 штук, счётчик специально пропускает значение «1»: либо совсем нет, либо минимум два (для надёжности на случай поломки). Материал: дерево (дешевле) / металл и т.д.</li>" +
+      "<li><b>Лифты</b> — от 0 до 3 штук, стиль дверей (створчатые/раздвижные) на выбор.</li>" +
+      "<li>Эскалаторы и лифты немного увеличивают пропускную способность станции.</li>" +
+      "</ul>"
+  },
+  {
+    title: "🎨 Редактор станции — Дизайн",
+    body: "<p>Вкладка «Дизайн» меняет материалы отделки и сразу перерисовывает оба превью (вид сбоку и сверху) — как и на вкладках «Планировка»/«Спуск», изменения сначала «примеряются» и требуют подтверждения кнопкой «💾 Сохранить дизайн»:</p>" +
+      "<ul>" +
+      "<li><b>Пол</b>: бетон → керамогранит → терраццо → мрамор → мрамор с золотом и т.д.</li>" +
+      "<li><b>Стены</b>: побелка → плитка → гранит → тёмный гранит → стеклянные панели → мозаика → «звёздное небо» и т.д.</li>" +
+      "<li><b>Освещение</b>: лампы → люминесцентные линии → неон → люстры и т.д.</li>" +
+      "<li><b>Стиль колонн</b> (если колонны включены на «Планировке»): простые → канелюры → дорические → хром и т.д.</li>" +
+      "<li>Список отделки время от времени пополняется — новые варианты всегда встают в ту же лесенку «от дешёвого к дорогому».</li>" +
+      "<li>Красивая отделка даёт до <b>+50%</b> к пассажиропотоку на крупных станциях в центре города, а торговые киоски приносят арендный доход, растущий вместе с потоком. Но на маленьких окраинных станциях с низким потоком дорогой дизайн обычно <b>не окупается</b> — считайте баланс!</li>" +
+      "</ul>"
+  },
+  {
+    title: "🌳 Кварталы города",
+    body: "<p>Помимо жилых домов, офисов, промзоны и делового центра, в городе постепенно появляются:</p>" +
+      "<ul>" +
+      "<li><b>Парки</b> и <b>школы</b> — с самого начала игры, среди жилой застройки, и т.д.</li>" +
+      "<li><b>Университет</b> — открывается один раз около 1950 года, даёт заметный студенческий поток.</li>" +
+      "<li><b>Аэропорт</b> — открывается один раз около 1962 года на окраине карты и становится крупнейшим источником пассажиров в городе.</li>" +
+      "<li>Станции рядом с этими кварталами получают больше пассажиров — стройте линии с расчётом на них.</li>" +
+      "</ul>"
+  },
+  {
+    title: "📰 Отзывы пассажиров",
+    body: "<p>Кнопка <b>«💬 ОТЗЫВЫ ПАССАЖИРОВ»</b> сбоку экрана открывает панель с тремя эпохами оформления.</p>" +
+      "<ul>" +
+      "<li>Заметки в газете, форумные посты и современные отзывы <b>реагируют на реальные станции</b>: короткая платформа вызовет жалобы на давку, отсутствие санузла — возмущение, а красивая отделка — похвалу с упоминанием названия станции.</li>" +
+      "<li>Разделы «Веб 90-х» и «Современный интерфейс» открываются по мере того, как город доживает до 1990 и 2010 годов соответственно.</li>" +
+      "</ul>"
+  },
+  {
+    title: "🗺 Рост города",
+    body: "<ul>" +
+      "<li>Город стартует с картой <b>60×60</b>.</li>" +
+      "<li>Через <b>15 игровых лет</b> граница расширяется до <b>90×90</b>, ещё через 15 лет — до <b>120×120</b>.</li>" +
+      "<li>Центр города, река, дороги и все ваши станции с линиями остаются на месте — вокруг просто достраиваются новые кварталы.</li>" +
+      "</ul>"
+  },
+  {
+    title: "⚙ Настройки: качество и сложность",
+    body: "<p>Кнопка <b>«⚙ Настройки»</b> в шапке открывает два независимых блока:</p>" +
+      "<ul>" +
+      "<li><b>Качество графики</b> (низкое/среднее/высокое) — на низком отключаются анимации, частицы и детали тайлов, что заметно ускоряет игру на слабых устройствах. Тонировку сезона, частицы и анимации застройки можно включать/выключать по отдельности.</li>" +
+      "<li><b>Сложность</b>: «Нормальная» — как описано на предыдущих страницах. «Лёгкая» — старт с $100 000, пассажиропоток всегда на сезонном пике, войны и кризисы больше не снижают спрос.</li>" +
+      "</ul>"
+  },
+  {
+    title: "💾 Сохранение игры (5 слотов)",
+    body: "<ul>" +
+      "<li>Кнопка <b>«💾 Сохранить»</b> в шапке создаёт новое сохранение с меткой даты/времени — таких слотов может быть до <b>5</b> одновременно.</li>" +
+      "<li>Кнопка <b>«📂 Загрузить»</b> открывает список сохранений: каждое можно переименовать, загрузить, <b>закрепить</b> 📌 (чтобы не удалялось автоматически) или удалить вручную.</li>" +
+      "<li>Если все 5 слотов закреплены, кнопка «Сохранить» становится неактивной — открепите хотя бы один, чтобы освободить место.</li>" +
+      "<li>Сохраняется всё: карта, казна, станции с полным дизайном и спусками, линии, переходы, гостевая книга отзывов и даже выбранная сложность.</li>" +
+      "<li>Сохранения хранятся локально на этом устройстве в этом браузере — на другом устройстве или после очистки данных браузера они не будут доступны. Старые сохранения совместимы с новыми версиями игры — недостающие настройки подставляются по умолчанию.</li>" +
+      "</ul>"
+  },
+  {
+    title: "✅ Коротко: как не обанкротиться",
+    body: "<ul>" +
+      "<li>Следите за казной вверху экрана — она краснеет, когда денег становится мало.</li>" +
+      "<li>Не перегружайте маленькие окраинные станции дорогим дизайном — вложения могут не окупиться.</li>" +
+      "<li>Пересадочные узлы и выходы — недорогой способ увеличить доход существующих станций, а не только строить новые.</li>" +
+      "<li>Этот туториал всегда доступен по кнопке <b>«❓ Туториал»</b> в шапке.</li>" +
+      "</ul>"
+  },
+];
+let tutPage = 0;
+function renderTutorial(){
+  const p = TUTORIAL_PAGES[tutPage];
+  tutContent.innerHTML = "<h3>" + p.title + "</h3>" + p.body;
+  tutPageIndicator.textContent = (tutPage+1) + " / " + TUTORIAL_PAGES.length;
+  tutPrev.disabled = tutPage === 0;
+  tutNext.textContent = tutPage === TUTORIAL_PAGES.length-1 ? "Готово ✓" : "Далее →";
+  tutDots.innerHTML = "";
+  TUTORIAL_PAGES.forEach((_, i) => {
+    const d = document.createElement("span");
+    d.className = "tutDot" + (i === tutPage ? " active" : "");
+    d.title = TUTORIAL_PAGES[i].title;
+    d.addEventListener("click", () => { tutPage = i; renderTutorial(); });
+    tutDots.appendChild(d);
+  });
+}
+function openTutorial(){
+  tutPage = 0;
+  renderTutorial();
+  tutorialModal.style.display = "flex";
+}
+function closeTutorial(){
+  tutorialModal.style.display = "none";
+}
+btnTutorial.addEventListener("click", openTutorial);
+tutClose.addEventListener("click", closeTutorial);
+tutorialModal.addEventListener("click", e => { if (e.target === tutorialModal) closeTutorial(); });
+tutPrev.addEventListener("click", () => { if (tutPage > 0){ tutPage--; renderTutorial(); } });
+tutNext.addEventListener("click", () => {
+  if (tutPage < TUTORIAL_PAGES.length-1){ tutPage++; renderTutorial(); }
+  else { closeTutorial(); }
+});
+// При самом первом запуске в этом браузере — показать туториал автоматически.
+// localStorage может быть недоступен в некоторых окружениях — тогда просто
+// не показываем автоматически, но кнопка «Туториал» всегда работает.
+try{
+  if (!localStorage.getItem("metroTycoonTutorialSeen")){
+    openTutorial();
+    localStorage.setItem("metroTycoonTutorialSeen", "1");
+  }
+}catch(e){ /* localStorage недоступен — пропускаем автопоказ */ }
+
+/* ================= БОКОВАЯ ПАНЕЛЬ ОТЗЫВОВ ПАССАЖИРОВ (3 эпохи) ================= */
+// Пороги открытия эпох — привязаны к игровому году, чтобы контент не забегал вперёд времени.
+const ERA_WEB90_MIN_YEAR = 1990;
+const ERA_MODERN_MIN_YEAR = 2010;
+const MONTHS_GEN = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+function gameDateStr(seed){
+  const day = 3 + ((seed*37) % 25); // детерминированное «число месяца» по id станции
+  return day + " " + MONTHS_GEN[month] + " " + year + " года";
+}
+// Находит среди построенных станций ту, что лучше всего подходит под условие шаблона:
+// сначала фильтр по predicate, затем сортировка по keyFn (по убыванию, если desc).
+function pickStation(predicate, keyFn, desc){
+  const matches = stations.filter(predicate);
+  if (!matches.length) return null;
+  matches.sort((a,b) => desc ? keyFn(b)-keyFn(a) : keyFn(a)-keyFn(b));
+  return matches[0];
+}
+
+// ---- Эпоха 1: Газета — заметки генерируются из РЕАЛЬНОГО состояния станций.
+// Заметка появляется только если среди построенных станций находится подходящая под
+// условие (короткая платформа, отсутствие уборной, дешёвая отделка и т.д.) — то есть
+// заголовки не декоративны, а реагируют на то, что игрок реально построил.
+const NEWSPAPER_TEMPLATES = [
+  {
+    key:"crowding", minYear:1935, metaTag:"Городская хроника",
+    head:"ДАВКА НА ПЕРРОНАХ НЕ СТИХАЕТ",
+    find: () => pickStation(s => !s.conserved && s.design.length==="short", s=>s.lastPassengers||0, true),
+    lead: s => "Наш корреспондент сообщает: давка на перронах не стихает — размеры станции «" + s.name + "»",
+    more: s => " оставляют желать лучшего. Короткая платформа не в силах вместить всех желающих в час пик, пассажиры жалуются на давку и просят рассмотреть её удлинение до стандартных четырёх вагонов."
+  },
+  {
+    key:"bleak", minYear:1938, metaTag:"Письмо в редакцию",
+    head:"ХОЛОДНЫЕ СТЕНЫ И СКУПОЕ ОСВЕЩЕНИЕ",
+    find: () => pickStation(s => !s.conserved && comfortScore(s.design) < 0.15 && (s.lastPassengers||0) > 150, s=>s.lastPassengers||0, true),
+    lead: s => "Читатели жалуются: убранство станции «" + s.name + "» оставляет желать лучшего —",
+    more: s => " голый бетон, ни единого украшения, а лампы горят так тускло, что читать афишу на стене решительно невозможно. Комитет метростроя просят выделить средства на ремонт."
+  },
+  {
+    key:"restroom", minYear:1940, metaTag:"Заметки метростроевца",
+    head:"ГДЕ ЖЕ УБОРНЫЕ, СПРАШИВАЮТ ГОРОЖАНЕ",
+    find: () => pickStation(s => !s.conserved && !s.design.restroom, s=>s.lastPassengers||0, true),
+    lead: s => "На протяжении нескольких месяцев в редакцию поступают жалобы на полное отсутствие санузлов на станции «" + s.name + "»",
+    more: s => " — при том потоке пассажиров, что проходит через неё ежедневно. Комитет обещает исправить положение, однако горожане настроены скептически."
+  },
+  {
+    key:"praise", minYear:1945, metaTag:"Репортаж с открытия",
+    head:"НОВАЯ СТАНЦИЯ ПОРАЗИЛА ПУБЛИКУ",
+    find: () => pickStation(s => !s.conserved && comfortScore(s.design) >= 0.62, s=>comfortScore(s.design), true),
+    lead: s => optFind(WALLS_OPTS, s.design.walls).label.toLowerCase() + " и " + optFind(LIGHT_OPTS, s.design.lighting).label.toLowerCase() + " станции «" + s.name + "» вызвали настоящий восторг —",
+    more: s => " жители называют её «подземным дворцом» и стекаются целыми семьями, чтобы просто полюбоваться убранством, даже без надобности куда-либо ехать."
+  },
+  {
+    key:"needLong", minYear:1949, metaTag:"Отклики читателей",
+    head:"ЧЕТЫРЕ ВАГОНА — ЭТОГО МАЛО, СЧИТАЮТ ЧИТАТЕЛИ",
+    find: () => pickStation(s => !s.conserved && s.design.length!=="long" && (s.lastPassengers||0) > 1800, s=>s.lastPassengers||0, true),
+    lead: s => "Несмотря на стандартную длину платформы, станция «" + s.name + "» по-прежнему не справляется с потоком —",
+    more: s => " пассажиры настаивают: без удлинённой платформы на шесть вагонов здесь не обойтись, особенно по будним дням."
+  },
+  {
+    key:"spacious", minYear:1951, metaTag:"Отклики читателей",
+    head:"ПАССАЖИРЫ ХВАЛЯТ ПРОСТОРНЫЕ ПЛАТФОРМЫ",
+    find: () => pickStation(s => !s.conserved && s.design.length==="long", s=>s.lastPassengers||0, true),
+    lead: s => "Удлинённая платформа станции «" + s.name + "» заметно облегчила жизнь пассажирам —",
+    more: s => " давки в час пик почти не стало, и горожане просят метрострой применить такое же решение и на других линиях."
+  },
+  {
+    key:"kiosks", minYear:1946, metaTag:"Городская хроника",
+    head:"ТОРГОВЫЕ КИОСКИ ПРИШЛИСЬ ПО ВКУСУ",
+    find: () => pickStation(s => !s.conserved && s.design.shop, s=>s.lastPassengers||0, true),
+    lead: s => "Торговые киоски у станции «" + s.name + "» уже стали местом встречи горожан —",
+    more: s => " здесь можно купить свежую выпечку и газету прямо по пути домой. Комитет рассматривает возможность открытия таких же киосков на других станциях."
+  },
+  {
+    // Про лифт пишут только с похвалой (и только если он реально есть) — на отсутствие
+    // лифта пассажиры прошлых эпох жалоб не подают, это ещё не общепринятая норма.
+    key:"elevatorPraise", minYear:1955, metaTag:"Городская хроника",
+    head:"ЛИФТ НА СТАНЦИИ — ЗАБОТА О ГОРОЖАНАХ",
+    find: () => pickStation(s => !s.conserved && s.exits.some(e => (e.elevatorCount||0) > 0), s=>s.lastPassengers||0, true),
+    lead: s => "Станция «" + s.name + "» одной из первых обзавелась лифтом для спуска на платформу —",
+    more: s => " пожилые горожане и матери с колясками отдельно благодарят метрострой за такую заботу."
+  },
+];
+function buildNewspaperArticles(){
+  const out = [];
+  NEWSPAPER_TEMPLATES.forEach(t => {
+    if (year < t.minYear) return;
+    const s = t.find();
+    if (!s) return;
+    out.push({
+      head: t.head,
+      meta: gameDateStr(s.id) + " · " + t.metaTag,
+      lead: t.lead(s),
+      more: t.more(s),
+    });
+  });
+  return out;
+}
+
+// ---- Эпоха 2: Ранние ПК, форум конца 90-х (раздел открывается только с 1990 года) ----
+const WEB90_POSTS = [
+  { who:"metroFan95",  when:"14.02.1997 23:41", subj:"Re: жетоны в кассе", text:"Опять четверть часа в очереди за жетоном!! Ставьте уже автоматы, век на дворе почти 21-й!!" },
+  { who:"Guest_Vasya",  when:"02.06.1998 09:12", subj:"интервалы поездов", text:"после 21:00 поезда ходят раз в 12 минут, это ужас просто. на новой линии светлее и приятнее, но ждать всё равно долго." },
+  { who:"anna_msk",     when:"19.09.1998 18:03", subj:"мало станций!!!", text:"живу на окраине, до ближайшей станции пилить пешком 20 минут. когда уже построят новую ветку??? прошу администрацию ускориться." },
+  { who:"webmaster_87", when:"05.11.1999 12:55", subj:"освещение в переходах", text:"переход между линиями тёмный как тоннель (ну, это и есть тоннель, ха-ха), но серьёзно — поставьте лампы поярче, страшно ходить вечером." },
+  { who:"Guest_777",    when:"23.12.1999 20:17", subj:"ПРЕДЛОЖЕНИЕ", text:"а давайте сделаем карту метро с расписанием на сайте города? было бы очень удобно смотреть с работы!" },
+];
+// Отзывы, добавленные самим игроком через гостевую книгу (сохраняются между перерисовками)
+let web90UserPosts = [];
+
+// ---- Эпоха 3: современные отзывы (раздел открывается только с 2010 года) ----
+const REVIEWER_POOL = [
+  { name:"Игорь П.", init:"ИП", color:"#5fa8ff" }, { name:"Марина С.", init:"МС", color:"#ff8f4d" },
+  { name:"Дмитрий К.", init:"ДК", color:"#7ee081" }, { name:"Анна В.", init:"АВ", color:"#e8c143" },
+  { name:"Сергей Л.", init:"СЛ", color:"#c17ee0" }, { name:"Ольга Т.", init:"ОТ", color:"#4dd0e1" },
+  { name:"Тимур Р.", init:"ТР", color:"#ff4da6" }, { name:"Елена Б.", init:"ЕБ", color:"#9adc4c" },
+];
+function reviewerFor(seed){ return REVIEWER_POOL[seed % REVIEWER_POOL.length]; }
+let modernDynamicLikes = {}; // сохраняет лайки динамических отзывов между перерисовками, ключ "шаблон:станция"
+
+const MODERN_REVIEWS = [
+  { id:"wifi1", name:"Игорь П.", init:"ИП", color:"#5fa8ff", when:"3 дня назад", stars:"★★★☆☆", tags:[["Wi-Fi","#5fa8ff"]], text:"На новой станции обещали Wi-Fi, но ловит только у турникетов. Хотелось бы стабильный сигнал по всей платформе.", likes:14 },
+  { id:"climate1", name:"Марина С.", init:"МС", color:"#ff8f4d", when:"неделю назад", stars:"★★☆☆☆", tags:[["Климат","#ff8f4d"]], text:"Летом в вагонах невыносимо душно, кондиционер работает через раз. Зимой наоборот — дует ледяным воздухом.", likes:27 },
+  { id:"pay1", name:"Анна В.", init:"АВ", color:"#e8c143", when:"3 недели назад", stars:"★☆☆☆☆", tags:[["Оплата","#e8c143"]], text:"Бесконтактная оплата опять зависла на входе, турникет закрылся прямо перед носом. Это уже третий раз за месяц!", likes:19 },
+  { id:"wifi2", name:"Сергей Л.", init:"СЛ", color:"#c17ee0", when:"месяц назад", stars:"★★★★☆", tags:[["Wi-Fi","#5fa8ff"],["Функционал","#c17ee0"]], text:"Приложение с картой линий и реальным временем прибытия — огромный шаг вперёд. Осталось доделать Wi-Fi в тоннелях.", likes:33 },
+  { id:"climate2", name:"Ольга Т.", init:"ОТ", color:"#4dd0e1", when:"месяц назад", stars:"★★★★☆", tags:[["Климат","#ff8f4d"]], text:"Климат-контроль в новых вагонах отличный, но старый подвижной состав по-прежнему без кондиционера — неравномерно как-то.", likes:9 },
+];
+// Динамические шаблоны отзывов: генерируют карточку только если находится реальная
+// станция, подходящая под условие (комфорт, длина платформы, киоски, санузел).
+const MODERN_DYNAMIC_TEMPLATES = [
+  {
+    key:"designPraise", stars:"★★★★★", tags:[["Дизайн","#7ee081"]],
+    find: () => pickStation(s => !s.conserved && comfortScore(s.design) >= 0.55, s=>comfortScore(s.design), true),
+    text: s => "Станция «" + s.name + "» с отделкой (" + optFind(FLOOR_OPTS,s.design.floor).label.toLowerCase() + ", " + optFind(WALLS_OPTS,s.design.walls).label.toLowerCase() + ") выглядит потрясающе — приятно даже просто проходить через неё каждый день.",
+  },
+  {
+    key:"designComplaint", stars:"★★☆☆☆", tags:[["Дизайн","#7ee081"]],
+    find: () => pickStation(s => !s.conserved && comfortScore(s.design) < 0.12 && (s.lastPassengers||0) > 150, s=>s.lastPassengers||0, true),
+    text: s => "Станция «" + s.name + "» до сих пор выглядит как голый бетонный зал — при таком пассажиропотоке пора бы вложиться в ремонт.",
+  },
+  {
+    key:"shopPraise", stars:"★★★★☆", tags:[["Функционал","#c17ee0"]],
+    find: () => pickStation(s => !s.conserved && s.design.shop && (s.lastPassengers||0) > 200, s=>s.lastPassengers||0, true),
+    text: s => "Киоски на станции «" + s.name + "» — отличная штука, можно перехватить кофе прямо по пути на работу.",
+  },
+  {
+    key:"crowdingModern", stars:"★★☆☆☆", tags:[["Функционал","#c17ee0"]],
+    find: () => pickStation(s => !s.conserved && s.design.length==="short" && (s.lastPassengers||0) > 800, s=>s.lastPassengers||0, true),
+    text: s => "На станции «" + s.name + "» в час пик просто не протолкнуться — короткая платформа явно не справляется с потоком.",
+  },
+  {
+    key:"noRestroomModern", stars:"★★★☆☆", tags:[["Функционал","#c17ee0"]],
+    find: () => pickStation(s => !s.conserved && !s.design.restroom && (s.lastPassengers||0) > 300, s=>s.lastPassengers||0, true),
+    text: s => "Странно, что на такой загруженной станции, как «" + s.name + "», до сих пор нет туалета.",
+  },
+  {
+    // Про лифт — только похвала за доступность, никогда жалоба на его отсутствие.
+    key:"elevatorPraiseModern", stars:"★★★★★", tags:[["Функционал","#c17ee0"]],
+    find: () => pickStation(s => !s.conserved && s.exits.some(e => (e.elevatorCount||0) > 0), s=>s.lastPassengers||0, true),
+    text: s => "Спасибо за лифт на станции «" + s.name + "» — с коляской или чемоданом это огромное облегчение, больше не нужно искать другой вход.",
+  },
+];
+// Подстраивает тексты отзывов о Wi-Fi под реальное состояние города (сколько станций
+// реально оснащено Wi-Fi прямо сейчас) и добавляет динамические отзывы по реальным станциям.
+function buildLiveModernReviews(){
+  const total = stations.length;
+  const wifiCount = stations.filter(s => s.design.wifi).length;
+  const base = MODERN_REVIEWS.map(r => {
+    if (r.id !== "wifi1") return r;
+    const copy = Object.assign({}, r);
+    if (total === 0){
+      copy.text = "Метро в городе только строится — станций пока нет, а вопрос про Wi-Fi подождёт.";
+    } else if (wifiCount === 0){
+      copy.text = "Ни на одной станции до сих пор нет Wi-Fi — когда уже проведут?";
+    } else if (wifiCount < total){
+      copy.text = "Wi-Fi есть уже на " + wifiCount + " из " + total + " станций, но ловит нестабильно — надеюсь, скоро проведут везде.";
+    } else {
+      copy.text = "Wi-Fi теперь есть на всех станциях сети, подключается сразу — больше нет нареканий!";
+    }
+    return copy;
+  });
+  const dynamic = [];
+  MODERN_DYNAMIC_TEMPLATES.forEach(t => {
+    const s = t.find();
+    if (!s) return;
+    const likeKey = t.key + ":" + s.id;
+    if (!(likeKey in modernDynamicLikes)) modernDynamicLikes[likeKey] = 6 + (s.id*3)%20;
+    const rv = reviewerFor(s.id + t.key.length);
+    dynamic.push({
+      id: likeKey, name: rv.name, init: rv.init, color: rv.color,
+      when: MONTHS_GEN[month] + " " + year, stars: t.stars, tags: t.tags,
+      text: t.text(s), likes: modernDynamicLikes[likeKey],
+    });
+  });
+  return base.concat(dynamic);
+}
+
+
+// Заглушка «раздел ещё не наступил» — единый стиль для web90/modern, пока их эпоха не пришла
+function lockedEraHtml(icon, title, unlockYear){
+  const left = Math.max(0, unlockYear - year);
+  return '<div class="revLocked">' +
+    '<div class="revLockedIcon">' + icon + '</div>' +
+    '<h3>' + title + '</h3>' +
+    '<p>Этот раздел появится, когда наступит <b>' + unlockYear + ' год</b>.</p>' +
+    '<p class="revLockedSub">' + (left > 0 ? "Осталось примерно " + left + " " + yearsWord(left) + " (сейчас " + year + " год)." : "Скоро откроется.") + '</p>' +
+  '</div>';
+}
+function yearsWord(n){
+  const m10 = n % 10, m100 = n % 100;
+  if (m10===1 && m100!==11) return "год";
+  if (m10>=2 && m10<=4 && (m100<10 || m100>=20)) return "года";
+  return "лет";
+}
+
+function renderNewspaper(){
+  const available = buildNewspaperArticles();
+  revNewspaperEl.innerHTML =
+    '<div class="npMasthead">' +
+      '<h2>Метрополитенские Вести</h2>' +
+      '<div class="npSub">Голос подземных магистралей города</div>' +
+      '<div class="npDate">Номер издаётся с 1935 года · Сейчас на дворе ' + year + ' год · Цена 10 копеек</div>' +
+    '</div>' +
+    '<div class="npColumns" id="npColumnsInner"></div>';
+  const wrap = revNewspaperEl.querySelector("#npColumnsInner");
+  if (!available.length){
+    const empty = document.createElement("div");
+    empty.className = "npEmpty";
+    empty.textContent = stations.length
+      ? "Пока ни одна станция не даёт повода для заметки — читайте снова, когда город и метро подрастут."
+      : "Свежих номеров пока нет — постройте первую станцию, и в газете появятся заметки о её работе.";
+    wrap.appendChild(empty);
+    return;
+  }
+  available.forEach((a, i) => {
+    const art = document.createElement("div");
+    art.className = "npArticle";
+    art.style.animationDelay = (i*70) + "ms";
+    art.innerHTML =
+      "<h3>" + a.head + "</h3>" +
+      '<div class="npMeta">' + a.meta + "</div>" +
+      "<p>" + a.lead + '<span class="npMore">' + a.more + "</span></p>" +
+      '<span class="npToggle">Читать полностью »</span>';
+    const toggle = art.querySelector(".npToggle");
+    art.addEventListener("click", () => {
+      art.classList.toggle("expanded");
+      toggle.textContent = art.classList.contains("expanded") ? "Свернуть «" : "Читать полностью »";
+    });
+    wrap.appendChild(art);
+  });
+}
+
+function renderWeb90(){
+  if (year < ERA_WEB90_MIN_YEAR){
+    revWeb90El.innerHTML = lockedEraHtml("💾", "Раздел ещё не в сети", ERA_WEB90_MIN_YEAR);
+    return;
+  }
+  revWeb90El.innerHTML =
+    '<div class="crtShell">' +
+      '<div class="crtBrand">◆ МЕТРО-ОНЛАЙН ТЕРМИНАЛ 2400 ◆</div>' +
+      '<div class="crtScreen"><div class="web90Page" id="web90Inner"></div></div>' +
+    '</div>';
+  const inner = revWeb90El.querySelector("#web90Inner");
+  inner.innerHTML =
+    "<marquee behavior='scroll' scrollamount='4'>*** ДОБРО ПОЖАЛОВАТЬ НА ФОРУМ ГОРОДСКОГО МЕТРОПОЛИТЕНА *** ЛУЧШИЕ ПРОСМОТРЫ В NETSCAPE NAVIGATOR *** ГОЛОСУЙ ЗА НАШ САЙТ ***</marquee>" +
+    '<div class="web90Title">~ ФОРУМ ПАССАЖИРОВ ~<br><span class="web90Blink">■</span> WELCOME.HTM</div>' +
+    '<div class="web90Counter">Вы посетитель №<b>004217</b> · сейчас ' + year + ' год</div>' +
+    '<hr class="web90Hr">' +
+    '<div id="web90Posts"></div>' +
+    '<hr class="web90Hr">' +
+    '<div class="web90Guestbook">' +
+      '<label>&gt; ОСТАВИТЬ ЗАПИСЬ В ГОСТЕВОЙ КНИГЕ:</label>' +
+      '<input id="web90NameInput" type="text" placeholder="Ваше имя (ник)" maxlength="20">' +
+      '<input id="web90MsgInput" type="text" placeholder="Текст сообщения..." maxlength="140">' +
+      '<button id="web90PostBtn" type="button">[ ОТПРАВИТЬ ]</button>' +
+    '</div>';
+  const postsBox = inner.querySelector("#web90Posts");
+  function addPost(p){
+    const d = document.createElement("div");
+    d.className = "web90Post";
+    d.innerHTML =
+      '<span class="subj">Тема: ' + p.subj + '</span>' +
+      '<span class="who">' + p.who + '</span><span class="when">[' + p.when + ']</span>' +
+      "<p>" + p.text + "</p>";
+    postsBox.appendChild(d);
+  }
+  WEB90_POSTS.forEach(addPost);
+  web90UserPosts.forEach(addPost); // ранее оставленные игроком записи переживают перерисовку
+  const nameInput = inner.querySelector("#web90NameInput");
+  const msgInput = inner.querySelector("#web90MsgInput");
+  const postBtn = inner.querySelector("#web90PostBtn");
+  postBtn.addEventListener("click", () => {
+    const nm = nameInput.value.trim() || "Guest_Anon";
+    const msg = msgInput.value.trim();
+    if (!msg) { msgInput.focus(); return; }
+    const now = new Date();
+    const when = String(now.getDate()).padStart(2,"0") + "." + String(now.getMonth()+1).padStart(2,"0") + "." + now.getFullYear() + " " +
+      String(now.getHours()).padStart(2,"0") + ":" + String(now.getMinutes()).padStart(2,"0");
+    const post = { who:nm, when:when, subj:"без темы", text:msg };
+    web90UserPosts.push(post);
+    addPost(post);
+    msgInput.value = "";
+    postsBox.scrollTop = postsBox.scrollHeight;
+  });
+  msgInput.addEventListener("keydown", e => { if (e.key === "Enter") postBtn.click(); });
+}
+
+function renderModern(){
+  if (year < ERA_MODERN_MIN_YEAR){
+    revModernEl.innerHTML = lockedEraHtml("📱", "Приложение ещё не запущено", ERA_MODERN_MIN_YEAR);
+    return;
+  }
+  const total = stations.length;
+  const wifiCount = stations.filter(s => s.design.wifi).length;
+  revModernEl.innerHTML =
+    '<div class="modHeader"><h2>Отзывы пассажиров</h2><div class="modSub">' + year + ' год · оценки работы метрополитена</div></div>' +
+    '<div class="modStatsLine">📊 В сети сейчас <b>' + total + '</b> ' + stationsWord(total) +
+      (total ? ', Wi-Fi доступен на <b>' + wifiCount + '</b> из них' : '') + '.</div>' +
+    '<div class="modFilters" id="modFiltersBox"></div>' +
+    '<div id="modCardsBox"></div>';
+  const allTags = ["Все", "Wi-Fi", "Климат", "Дизайн", "Оплата", "Функционал"];
+  const filtersBox = revModernEl.querySelector("#modFiltersBox");
+  const cardsBox = revModernEl.querySelector("#modCardsBox");
+  let activeFilter = "Все";
+  const liveReviews = buildLiveModernReviews();
+
+  function renderCards(){
+    cardsBox.innerHTML = "";
+    liveReviews
+      .filter(r => activeFilter === "Все" || r.tags.some(t => t[0] === activeFilter))
+      .forEach(r => {
+        const card = document.createElement("div");
+        card.className = "modCard";
+        const tagsHtml = r.tags.map(t => '<span class="modTag" style="background:' + t[1] + '22;color:' + t[1] + '">' + t[0] + "</span>").join("");
+        card.innerHTML =
+          '<div class="modCardHead">' +
+            '<div class="modAvatar" style="background:' + r.color + '">' + r.init + "</div>" +
+            '<div><div class="modName">' + r.name + '</div><div class="modWhen">' + r.when + "</div></div>" +
+            '<div class="modStars">' + r.stars + "</div>" +
+          "</div>" +
+          '<div class="modText">' + r.text + "</div>" +
+          '<div class="modTags">' + tagsHtml + "</div>" +
+          '<div class="modCardFoot"><button class="modLikeBtn" type="button">👍 Полезно (<span class="modLikeCount">' + r.likes + "</span>)</button></div>";
+        const likeBtn = card.querySelector(".modLikeBtn");
+        const likeCount = card.querySelector(".modLikeCount");
+        let liked = false;
+        likeBtn.addEventListener("click", () => {
+          liked = !liked;
+          const original = MODERN_REVIEWS.find(m => m.id === r.id);
+          if (original) original.likes += liked ? 1 : -1;
+          else if (r.id in modernDynamicLikes) modernDynamicLikes[r.id] += liked ? 1 : -1;
+          likeCount.textContent = liked ? r.likes+1 : r.likes;
+          likeBtn.classList.toggle("liked", liked);
+        });
+        cardsBox.appendChild(card);
+      });
+  }
+  allTags.forEach(tag => {
+    const b = document.createElement("button");
+    b.className = "modFilterBtn" + (tag === activeFilter ? " active" : "");
+    b.textContent = tag;
+    b.addEventListener("click", () => {
+      activeFilter = tag;
+      filtersBox.querySelectorAll(".modFilterBtn").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      renderCards();
+    });
+    filtersBox.appendChild(b);
+  });
+  renderCards();
+}
+function stationsWord(n){
+  const m10 = n % 10, m100 = n % 100;
+  if (m10===1 && m100!==11) return "станция";
+  if (m10>=2 && m10<=4 && (m100<10 || m100>=20)) return "станции";
+  return "станций";
+}
+
+/* ---- Мягкий звук шелеста бумаги (только для эпохи «Газета», синтез Web Audio, без файлов) ---- */
+let audioCtx = null;
+function getAudioCtx(){
+  if (!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e){ audioCtx = null; }
+  }
+  return audioCtx;
+}
+function playPaperRustle(){
+  const ac = getAudioCtx();
+  if (!ac) return;
+  if (ac.state === "suspended") ac.resume();
+  const now = ac.currentTime;
+  // 3 коротких пшика отфильтрованного шума создают ощущение шелеста бумаги
+  const bursts = [0, 0.09, 0.16];
+  bursts.forEach((offset, i) => {
+    const dur = 0.14 + Math.random()*0.06;
+    const bufferSize = Math.floor(ac.sampleRate * dur);
+    const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let n=0; n<bufferSize; n++) data[n] = (Math.random()*2-1) * (1 - n/bufferSize);
+    const src = ac.createBufferSource();
+    src.buffer = buffer;
+    const bandpass = ac.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 2200 + Math.random()*1400;
+    bandpass.Q.value = 0.6;
+    const gain = ac.createGain();
+    const peak = 0.05 + Math.random()*0.03;
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.exponentialRampToValueAtTime(peak, now + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + dur);
+    src.connect(bandpass); bandpass.connect(gain); gain.connect(ac.destination);
+    src.start(now + offset);
+    src.stop(now + offset + dur + 0.02);
+  });
+}
+
+function switchRevEra(eraKey){
+  revEraButtons.forEach(b => b.classList.toggle("active", b.dataset.era === eraKey));
+  revNewspaperEl.classList.toggle("active", eraKey === "newspaper");
+  revWeb90El.classList.toggle("active", eraKey === "web90");
+  revModernEl.classList.toggle("active", eraKey === "modern");
+  // Перерисовываем свежим содержимым (актуальный год, живая статистика),
+  // кроме гостевой книги 90-х — там нельзя терять недописанный игроком текст.
+  if (eraKey === "newspaper"){ renderNewspaper(); playPaperRustle(); }
+  else if (eraKey === "web90"){ renderWeb90(); }
+  else if (eraKey === "modern"){ renderModern(); }
+}
+function openReviewsPanel(){
+  revPanel.classList.add("open");
+  renderNewspaper();
+  renderWeb90();
+  renderModern();
+  if (revNewspaperEl.classList.contains("active")) playPaperRustle();
+}
+function closeReviewsPanel(){ revPanel.classList.remove("open"); }
+
+revTab.addEventListener("click", () => {
+  revPanel.classList.contains("open") ? closeReviewsPanel() : openReviewsPanel();
+});
+revCloseX.addEventListener("click", closeReviewsPanel);
+revEraButtons.forEach(btn => btn.addEventListener("click", () => switchRevEra(btn.dataset.era)));
+
+renderNewspaper();
+renderWeb90();
+renderModern();
+
+/* ================= СОХРАНЕНИЕ И ЗАГРУЗКА ИГРЫ (5 СЛОТОВ) ================= */
+const SAVE_KEY = "metroTycoonSave_v1";       // старый одиночный слот (для миграции)
+const SAVES_KEY = "metroTycoonSaves_v1";     // новый список из нескольких слотов
+const MAX_SAVES = 5;
+// Собирает полное состояние игры в простой JSON-совместимый объект: карта, город,
+// станции с их дизайном, линии, переходы, отзывы гостевой книги и лайки — всё,
+// что нужно, чтобы после перезагрузки страницы город выглядел точно так же.
+function serializeGame(){
+  return {
+    version: 1,
+    savedAt: Date.now(),
+    G, year, month, money, freq, ticketPrice, difficulty,
+    expanded90, expanded120, universitySpawned, airportSpawned,
+    BCX, BCY, MRX, MRY, SEC_R, SEC_C, riverHorizontal,
+    grid: Array.from(grid), zone: Array.from(zone), orient: Array.from(orient),
+    stations, lines, transfers,
+    nextStationId, nextLineId, activeLineId,
+    web90UserPosts, modernDynamicLikes,
+    modernLikes: MODERN_REVIEWS.map(r => ({ id:r.id, likes:r.likes })),
+  };
+}
+function loadGameState(data){
+  G = data.G || 60; N = G*G;
+  grid = Uint8Array.from(data.grid || new Uint8Array(N));
+  zone = Uint8Array.from(data.zone || new Uint8Array(N));
+  orient = Uint8Array.from(data.orient || new Uint8Array(N));
+  animT = new Float64Array(N).fill(-1);
+  animFrom = new Uint8Array(N);
+  cv.width = G*TS; cv.height = G*TS; fxCanvas.width = G*TS; fxCanvas.height = G*TS;
+
+  year = data.year || 1930; month = data.month || 0; money = (typeof data.money === "number") ? data.money : 50000;
+  freq = data.freq || 2; elFreq.value = freq; elFreqV.textContent = freq;
+  ticketPrice = data.ticketPrice || 3; elPrice.value = ticketPrice; elPriceV.textContent = "$" + ticketPrice;
+  difficulty = data.difficulty === "easy" ? "easy" : "normal"; applyQualityUI();
+  expanded90 = !!data.expanded90; expanded120 = !!data.expanded120;
+  universitySpawned = !!data.universitySpawned; airportSpawned = !!data.airportSpawned;
+  BCX = data.BCX || (G/2|0); BCY = data.BCY || (G/2|0);
+  MRX = data.MRX || (G/2|0); MRY = data.MRY || (G/2|0);
+  SEC_R = (data.SEC_R || []).slice(); SEC_C = (data.SEC_C || []).slice();
+  riverHorizontal = !!data.riverHorizontal;
+
+  stations = (data.stations || []).map(s => Object.assign(
+    { exits: [], conserved: false, lastPassengers: 0 },
+    s,
+    { design: Object.assign(defaultDesign(), s.design || {}), exits: (s.exits || []).map(e => {
+        // Совместимость со старыми сохранениями: раньше у выхода был один "type", теперь — набор счётчиков.
+        if (e.type !== undefined && e.stairsCount === undefined){
+          return { x:e.x, y:e.y, stairsCount: e.type==="stairs"?1:0, escalatorCount: e.type==="escalator"?1:0, elevatorCount: e.type==="elevator"?1:0 };
+        }
+        return { x:e.x, y:e.y, stairsCount:e.stairsCount||0, escalatorCount:e.escalatorCount||0, elevatorCount:e.elevatorCount||0 };
+      }) }
+  ));
+  lines = (data.lines || []).map(l => Object.assign({}, l, { stationIds: (l.stationIds || []).slice() }));
+  transfers = (data.transfers || []).slice();
+  nextStationId = data.nextStationId || (stations.reduce((m,s)=>Math.max(m,s.id),0)+1);
+  nextLineId = data.nextLineId || (lines.reduce((m,l)=>Math.max(m,l.id),0)+1);
+  activeLineId = data.activeLineId != null ? data.activeLineId : (lines[0] ? lines[0].id : null);
+  web90UserPosts = (data.web90UserPosts || []).slice();
+  modernDynamicLikes = Object.assign({}, data.modernDynamicLikes || {});
+  if (data.modernLikes){
+    data.modernLikes.forEach(ml => { const r = MODERN_REVIEWS.find(m => m.id === ml.id); if (r) r.likes = ml.likes; });
+  }
+
+  bakeAccess();
+  refreshStationIdx();
+  invalidateCatchments();
+
+  running = false; bankrupt = false; elapsed = 0;
+  btnPause.disabled = false; btnPause.textContent = "▶ Пуск";
+  setOverlay("ПАУЗА", "Нажмите «Пуск», чтобы продолжить", true);
+  mode = "none"; pendingStationId = null;
+  btnStation.classList.remove("active"); btnAttach.classList.remove("active");
+  closeAddLineForm();
+  closeStationModal();
+
+  renderLinesPanel();
+  updateHUD();
+  renderNewspaper(); renderWeb90(); renderModern();
+  log("Игра загружена из сохранения (" + new Date(data.savedAt).toLocaleString("ru-RU") + ").");
+}
+
+/* ---- Список из 5 слотов сохранений: закрепление, переименование, удаление ---- */
+function loadSavesList(){
+  try{
+    const raw = localStorage.getItem(SAVES_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+function writeSavesList(list){
+  try{ localStorage.setItem(SAVES_KEY, JSON.stringify(list)); return true; }
+  catch(e){ return false; }
+}
+function formatSaveDate(ts){
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2,"0");
+  return pad(d.getDate())+"."+pad(d.getMonth()+1)+"."+d.getFullYear()+", "+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+// Переносит старое одиночное сохранение (если оно есть) в новый список слотов —
+// чтобы никто не потерял прогресс при обновлении игры.
+function migrateOldSaveIfNeeded(){
+  try{
+    if (loadSavesList().length) return;
+    const oldRaw = localStorage.getItem(SAVE_KEY);
+    if (!oldRaw) return;
+    const oldData = JSON.parse(oldRaw);
+    const entry = {
+      id: "s" + Date.now(),
+      name: "Старое сохранение (" + formatSaveDate(oldData.savedAt || Date.now()) + ")",
+      createdAt: oldData.savedAt || Date.now(),
+      pinned: false,
+      data: oldData,
+    };
+    writeSavesList([entry]);
+    localStorage.removeItem(SAVE_KEY);
+  }catch(e){ /* localStorage недоступен — просто пропускаем миграцию */ }
+}
+function updateSaveButtonState(){
+  const list = loadSavesList();
+  const allPinnedFull = list.length >= MAX_SAVES && list.every(s => s.pinned);
+  btnSave.disabled = allPinnedFull;
+  btnSave.title = allPinnedFull ? "Все 5 слотов закреплены — снимите закрепление хотя бы с одного" : "";
+}
+btnSave.addEventListener("click", () => {
+  let list = loadSavesList();
+  if (list.length >= MAX_SAVES){
+    const unpinned = list.filter(s => !s.pinned).sort((a,b) => a.createdAt-b.createdAt);
+    if (!unpinned.length){
+      log("Все 5 сохранений закреплены — снимите закрепление хотя бы с одного, чтобы сохранить игру.");
+      updateSaveButtonState();
+      return;
+    }
+    const oldestId = unpinned[0].id;
+    list = list.filter(s => s.id !== oldestId);
+  }
+  const entry = {
+    id: "s" + Date.now() + "_" + Math.floor(Math.random()*1000),
+    name: formatSaveDate(Date.now()),
+    createdAt: Date.now(),
+    pinned: false,
+    data: serializeGame(),
+  };
+  list.push(entry);
+  if (writeSavesList(list)) log("Игра сохранена (" + entry.name + ").");
+  else log("Не удалось сохранить игру: сохранение в этом браузере недоступно.");
+  updateSaveButtonState();
+});
+function renderSavesList(){
+  const list = loadSavesList().slice().sort((a,b) => b.createdAt-a.createdAt);
+  savesListEl.innerHTML = "";
+  savesEmptyHint.style.display = list.length ? "none" : "block";
+  list.forEach(entry => {
+    const row = document.createElement("div");
+    row.className = "saveRow";
+
+    const main = document.createElement("div");
+    main.className = "saveRowMain";
+    const nameInput = document.createElement("input");
+    nameInput.className = "saveNameInput";
+    nameInput.value = entry.name;
+    nameInput.maxLength = 40;
+    nameInput.addEventListener("change", () => {
+      const list2 = loadSavesList();
+      const e2 = list2.find(s => s.id===entry.id);
+      if (e2){ e2.name = nameInput.value.trim() || e2.name; writeSavesList(list2); }
+    });
+    const dateEl = document.createElement("div");
+    dateEl.className = "saveDate";
+    dateEl.textContent = formatSaveDate(entry.createdAt) + (entry.pinned ? " · закреплено 📌" : "");
+    main.appendChild(nameInput); main.appendChild(dateEl);
+
+    const actions = document.createElement("div");
+    actions.className = "saveRowActions";
+    const loadBtn = document.createElement("button");
+    loadBtn.className = "saveActBtn saveLoadBtn"; loadBtn.textContent = "▶ Загрузить";
+    loadBtn.addEventListener("click", () => { loadGameState(entry.data); closeSavesModal(); });
+    const pinBtn = document.createElement("button");
+    pinBtn.className = "saveActBtn savePinBtn" + (entry.pinned ? " active" : "");
+    pinBtn.textContent = entry.pinned ? "📌" : "📍";
+    pinBtn.title = entry.pinned ? "Открепить" : "Закрепить (нестираемое)";
+    pinBtn.addEventListener("click", () => {
+      const list2 = loadSavesList();
+      const e2 = list2.find(s => s.id===entry.id);
+      if (e2){ e2.pinned = !e2.pinned; writeSavesList(list2); renderSavesList(); updateSaveButtonState(); }
+    });
+    const delBtn = document.createElement("button");
+    delBtn.className = "saveActBtn saveDelBtn"; delBtn.textContent = "🗑";
+    delBtn.title = "Удалить";
+    delBtn.addEventListener("click", () => {
+      const list2 = loadSavesList().filter(s => s.id!==entry.id);
+      writeSavesList(list2); renderSavesList(); updateSaveButtonState();
+      log("Сохранение «" + entry.name + "» удалено.");
+    });
+    actions.appendChild(loadBtn); actions.appendChild(pinBtn); actions.appendChild(delBtn);
+
+    row.appendChild(main); row.appendChild(actions);
+    savesListEl.appendChild(row);
+  });
+}
+function openSavesModal(){ migrateOldSaveIfNeeded(); renderSavesList(); savesModal.style.display = "flex"; }
+function closeSavesModal(){ savesModal.style.display = "none"; }
+btnLoad.addEventListener("click", openSavesModal);
+savesClose.addEventListener("click", closeSavesModal);
+savesModal.addEventListener("click", e => { if (e.target===savesModal) closeSavesModal(); });
+
+migrateOldSaveIfNeeded();
+updateSaveButtonState();
+
+/* ================= НАСТРОЙКИ: КАЧЕСТВО ГРАФИКИ И ЭФФЕКТЫ ================= */
+function applyQualityUI(){
+  qualityButtons.forEach(b => b.classList.toggle("active", b.dataset.q===quality));
+  difficultyButtons.forEach(b => b.classList.toggle("active", b.dataset.diff===difficulty));
+}
+btnSettings.addEventListener("click", () => { settingsModal.style.display="flex"; applyQualityUI(); });
+setClose.addEventListener("click", () => { settingsModal.style.display="none"; });
+settingsModal.addEventListener("click", e => { if (e.target===settingsModal) settingsModal.style.display="none"; });
+qualityButtons.forEach(b => b.addEventListener("click", () => {
+  quality = b.dataset.q;
+  applyQualityUI();
+  if (quality === "low"){
+    // Низкое качество сразу выключает тяжёлые эффекты — их всегда можно включить вручную обратно.
+    fxTintEnabled=false; fxParticlesEnabled=false; fxAnimEnabled=false;
+    setTintChk.checked=false; setParticlesChk.checked=false; setAnimChk.checked=false;
+    fxParticles.length = 0;
+    fxLayer.style.backgroundColor = "transparent";
+  }
+  log("Качество графики: " + (quality==="low"?"низкое":quality==="medium"?"среднее":"высокое") + ".");
+}));
+difficultyButtons.forEach(b => b.addEventListener("click", () => {
+  difficulty = b.dataset.diff;
+  applyQualityUI();
+  invalidateCatchments();
+  if (difficulty === "easy"){
+    log("Сложность: лёгкая. Пассажиропоток сразу вырос до максимума, сезонность и войны/кризисы больше не влияют. Стартовый баланс $100 000 применится со следующей «Новой игры».");
+  } else {
+    log("Сложность: нормальная. Сезонность и исторические события снова влияют на спрос. Стартовый баланс $50 000 применится со следующей «Новой игры».");
+  }
+}));
+setTintChk.addEventListener("change", () => { fxTintEnabled = setTintChk.checked; if (!fxTintEnabled) fxLayer.style.backgroundColor="transparent"; });
+setParticlesChk.addEventListener("change", () => { fxParticlesEnabled = setParticlesChk.checked; if (!fxParticlesEnabled) fxParticles.length=0; });
+setAnimChk.addEventListener("change", () => { fxAnimEnabled = setAnimChk.checked; });
+
+/* ================= СЕЗОННЫЕ ВИЗУАЛЬНЫЕ ЭФФЕКТЫ (снег/дождь/листья + тонировка) ================= */
+let fxParticles = [];
+let lastFxTs = performance.now();
+function seasonOf(m){
+  if (m===11 || m===0 || m===1) return "winter";
+  if (m>=2 && m<=4) return "spring";
+  if (m>=5 && m<=7) return "summer";
+  return "autumn";
+}
+const SEASON_TINT = {
+  winter: "rgba(225,235,248,.16)",
+  spring: "rgba(205,225,165,.08)",
+  summer: "rgba(225,222,110,.07)",
+  autumn: "rgba(222,145,55,.11)",
+};
+function updateSeasonTint(){
+  if (fxTintEnabled && quality!=="low") fxLayer.style.backgroundColor = SEASON_TINT[seasonOf(month)];
+  else fxLayer.style.backgroundColor = "transparent";
+}
+function maybeSpawnParticle(key){
+  const w = fxCanvas.width, h = fxCanvas.height;
+  if (!w || !h) return;
+  const maxParticles = quality==="high" ? 140 : 70;
+  if (fxParticles.length >= maxParticles) return;
+  if (key === "winter" && Math.random() < 0.5){
+    fxParticles.push({ type:"snow", x:Math.random()*w, y:-6, vy:0.4+Math.random()*0.6, vx:(Math.random()-0.5)*0.3, r:1.4+Math.random()*2 });
+  } else if (key === "autumn"){
+    if (Math.random() < 0.32) fxParticles.push({ type:"leaf", x:Math.random()*w, y:-8, vy:0.3+Math.random()*0.4, vx:(Math.random()-0.5)*0.6, r:3+Math.random()*2.4, rot:Math.random()*Math.PI*2, vr:(Math.random()-0.5)*0.06 });
+    if (Math.random() < 0.05) fxParticles.push({ type:"rain", x:Math.random()*w, y:-6, vy:3+Math.random()*2, vx:-0.6 });
+  }
+}
+// Отрисовка сезонного слоя: тонировка + частицы. Полностью отключаема (по отдельности) и
+// автоматически гасится на низком качестве графики.
+function drawFx(ts){
+  const dt = Math.min(60, ts - lastFxTs); lastFxTs = ts;
+  updateSeasonTint();
+  if (fxCanvas.width) fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  if (!fxParticlesEnabled || quality==="low"){ fxParticles.length = 0; return; }
+  const key = seasonOf(month);
+  for (let i=0; i<3; i++) maybeSpawnParticle(key);
+  const h = fxCanvas.height;
+  for (let i=fxParticles.length-1; i>=0; i--){
+    const p = fxParticles[i];
+    p.x += p.vx * (dt/16); p.y += p.vy * (dt/16);
+    if (p.rot !== undefined) p.rot += p.vr * (dt/16);
+    if (p.y > h+10){ fxParticles.splice(i,1); continue; }
+    if (p.type==="snow"){
+      fxCtx.fillStyle="rgba(255,255,255,.85)";
+      fxCtx.beginPath(); fxCtx.arc(p.x,p.y,p.r,0,Math.PI*2); fxCtx.fill();
+    } else if (p.type==="leaf"){
+      fxCtx.save(); fxCtx.translate(p.x,p.y); fxCtx.rotate(p.rot);
+      fxCtx.fillStyle="rgba(210,120,40,.85)";
+      fxCtx.beginPath(); fxCtx.ellipse(0,0,p.r,p.r*0.6,0,0,Math.PI*2); fxCtx.fill();
+      fxCtx.restore();
+    } else if (p.type==="rain"){
+      fxCtx.strokeStyle="rgba(180,200,230,.55)"; fxCtx.lineWidth=1;
+      fxCtx.beginPath(); fxCtx.moveTo(p.x,p.y); fxCtx.lineTo(p.x+p.vx*2,p.y+8); fxCtx.stroke();
+    }
+  }
+}
+
+/* ================= СТАРТ ================= */
+genCity();
+renderLinesPanel();
+updateHUD();
+applyQualityUI();
+log("Город основан. Бюджет метро: $50 000. Нажмите «Пуск».");
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
